@@ -37,6 +37,6 @@ Thumbs.db
 Desktop.ini
 
 # App output
-exports/
 output/
+generated_exports/
 *.log

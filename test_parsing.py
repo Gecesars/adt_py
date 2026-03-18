@@ -10,8 +10,9 @@ PARENT_ROOT = PROJECT_ROOT.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-from core.antenna_models import AntennaPanel, ArrayDesign, calculate_system_metrics
-from core.pattern_parser import read_hrp_pattern, read_vrp_pattern
+from models.antenna import AntennaPanel, ArrayDesign
+from parsers.patterns import read_hrp_pattern, read_vrp_pattern
+from solver.system_metrics import calculate_system_metrics
 
 
 def find_sample_patterns():

@@ -5,16 +5,16 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHeaderView, QPushButton, QLabel)
 from PyQt6.QtCore import Qt
 
-# Import UI modular components
-from ui.design_info import DesignInfoWidget
-from ui.pattern_library import PatternLibraryWidget
-from ui.antenna_design import AntennaDesignWidget
-from ui.tower_layout import TowerLayoutWidget
-from ui.compensation import CompensationWidget
-from ui.radiation_plots import HrpPlotWidget, VrpPlotWidget
-from ui.result_summary import ResultSummaryWidget
-from ui.message_list import MessageListWidget
-from ui.beam_shape import BeamShapeWidget
+# Import widget components
+from widgets.design_info import DesignInfoWidget
+from widgets.pattern_library import PatternLibraryWidget
+from widgets.antenna_design import AntennaDesignWidget
+from widgets.tower_layout import TowerLayoutWidget
+from widgets.compensation import CompensationWidget
+from widgets.radiation_plots import HrpPlotWidget, VrpPlotWidget
+from widgets.result_summary import ResultSummaryWidget
+from widgets.message_list import MessageListWidget
+from widgets.beam_shape import BeamShapeWidget
 
 
 class ADTMainWindow(QMainWindow):
@@ -22,6 +22,10 @@ class ADTMainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Antenna Design Tool (ADT) - Python Version")
         self.resize(1400, 900)
+        self.last_mag_3d = None
+        self.last_az_angles = None
+        self.last_el_angles = None
+        self.last_metrics = None
         
         self.init_menu()
         self.init_ui()
@@ -328,7 +332,8 @@ class ADTMainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.dock_left_top)
         
         self.dock_pattern_lib = QDockWidget("Pattern Library", self)
-        self.dock_pattern_lib.setWidget(PatternLibraryWidget())
+        self.pattern_library_widget = PatternLibraryWidget()
+        self.dock_pattern_lib.setWidget(self.pattern_library_widget)
         self.dock_pattern_lib.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.dock_pattern_lib)
         
@@ -388,15 +393,16 @@ class ADTMainWindow(QMainWindow):
         self.design_info_widget.calc_btn.clicked.connect(self.on_calculate_clicked)
 
     def on_calculate_clicked(self):
-        from core.antenna_models import calculate_system_metrics, ArrayDesign, AntennaPanel
         import datetime
+        from models.antenna import ArrayDesign, AntennaPanel
+        from solver.system_metrics import calculate_system_metrics
         
         # Scrape data from UI docks
         try:
             freq_str = self.design_info_widget.design_freq_input.text()
             frequency = float(freq_str) if freq_str else 539.0
             
-            pattern_configs = self.dock_pattern_lib.widget().get_pattern_configs()
+            pattern_configs = self.pattern_library_widget.get_pattern_configs()
             array_data = self.antenna_design_tab.get_array_data()
             
             # Build the backend models
@@ -440,21 +446,25 @@ class ADTMainWindow(QMainWindow):
             self.last_mag_3d = mag_3d
             self.last_az_angles = az_angles
             self.last_el_angles = el_angles
+            self.last_metrics = metrics
             
             # Update result UI tabs
             self.dock_result_summary.widget().update_results(metrics)
             
             # Update plot widgets
-            self.dock_hrp.widget().plot_data(az_angles, mag_3d[:, 900]) # Example indexing 90 degrees el
-            self.dock_vrp.widget().plot_data(el_angles, mag_3d[0, :])
+            self.hrp_widget.plot_data(az_angles, mag_3d[:, 900])
+            self.vrp_widget.plot_data(el_angles, mag_3d[0, :])
             
             # Update message log
             time_str = datetime.datetime.now().strftime("%I:%M:%S %p")
-            self.dock_message_list.widget().add_message(time_str, "Calculated 3D Pattern properly dynamically using selected GUI .pat files.")
+            self.message_list_widget.add_message(
+                time_str,
+                "Calculated 3D pattern using the selected pattern files.",
+            )
         
         except Exception as e:
             time_str = datetime.datetime.now().strftime("%I:%M:%S %p")
-            self.dock_message_list.widget().add_message(time_str, f"Error calculating pattern: {str(e)}")
+            self.message_list_widget.add_message(time_str, f"Error calculating pattern: {str(e)}")
 
     def on_not_implemented(self):
         from PyQt6.QtWidgets import QMessageBox
@@ -473,29 +483,34 @@ class ADTMainWindow(QMainWindow):
             QMessageBox.information(self, "Saved", f"Saved project to: {path}")
 
     def on_util_dist(self):
-        from ui.dis_and_bear import DistanceBearingDialog
+        from widgets.dis_and_bear import DistanceBearingDialog
         dlg = DistanceBearingDialog(self)
         dlg.exec()
 
     def on_util_exposure(self):
-        from ui.field_strength import FieldStrengthExposureDialog
-        # Pass cached 3D metrics to the Field Strength UI if available
-        # It relies on Tx Power and ERP from the ResultSummary panel
+        from widgets.field_strength import FieldStrengthExposureDialog
+
         try:
-            tx_pow = float(self.antenna_design_tab.design_info.input_tx_power.text() or 10.0)
-            erp = float(self.antenna_design_tab.result_summary.val_erp_kw.text() or tx_pow)
+            tx_pow = float((self.last_metrics or {}).get("Transmitter Power (kW)", 10.0))
         except ValueError:
             tx_pow = 10.0
-            erp = 10.0
-            
-        freq = self.antenna_design_tab.design_info.channel_frequency
+
+        try:
+            erp = float((self.last_metrics or {}).get("ERP (kW)", tx_pow))
+        except ValueError:
+            erp = tx_pow
+
+        try:
+            freq = float(self.design_info_widget.channel_freq_input.text() or 539.0)
+        except ValueError:
+            freq = 539.0
         
         dlg = FieldStrengthExposureDialog(self, frequency=freq, tx_power=tx_pow, erp=erp,
                                           mag_3d=self.last_mag_3d, az_angles=self.last_az_angles, el_angles=self.last_el_angles)
         dlg.exec()
 
     def on_util_blackspot(self):
-        from ui.black_spot import BlackSpotViewer
+        from widgets.black_spot import BlackSpotViewer
         if self.last_mag_3d is None:
             from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(self, "No Pattern Data", "Please calculate a 3D pattern before opening the Blackspot Viewer.")
@@ -506,7 +521,7 @@ class ADTMainWindow(QMainWindow):
 
     def on_export_file(self, format_name, ext):
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
-        from core.exporters import export_to_format
+        from exports.pattern_exporters import export_to_format
         
         path, _ = QFileDialog.getSaveFileName(self, f"Export as {format_name}", "", f"{format_name} Files (*.{ext});;All Files (*)")
         if path:

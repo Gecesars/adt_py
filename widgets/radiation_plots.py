@@ -95,6 +95,24 @@ class HrpPlotWidget(QWidget):
         
         curve = pg.PlotCurveItem(x, y, pen=pg.mkPen('b', width=2))
         self.plot_widget.addItem(curve)
+
+    def plot_data(self, angles_deg, magnitudes):
+        self.plot_widget.clear()
+
+        theta = np.deg2rad(np.asarray(angles_deg))
+        radius = np.asarray(magnitudes)
+
+        if radius.size == 0:
+            return
+
+        max_radius = np.max(radius)
+        if max_radius > 0:
+            radius = radius / max_radius
+
+        x = radius * np.cos(theta)
+        y = radius * np.sin(theta)
+        curve = pg.PlotCurveItem(x, y, pen=pg.mkPen('b', width=2))
+        self.plot_widget.addItem(curve)
         
 
 class VrpPlotWidget(QWidget):
@@ -165,5 +183,23 @@ class VrpPlotWidget(QWidget):
             y = 20 * np.log10(np.abs(np.sinc(x/2.0)) + 1e-4)
             self.plot_widget.setLabel('left', "dB (40 Log Pwr)")
             
+        curve = pg.PlotCurveItem(x, y, pen=pg.mkPen('b', width=2))
+        self.plot_widget.addItem(curve)
+
+    def plot_data(self, angles_deg, magnitudes):
+        self.plot_widget.clear()
+
+        x = np.asarray(angles_deg)
+        y = np.asarray(magnitudes)
+
+        if y.size == 0:
+            return
+
+        max_magnitude = np.max(y)
+        if max_magnitude > 0:
+            y = y / max_magnitude
+
+        self.plot_widget.setYRange(0, 1)
+        self.plot_widget.setLabel('left', "E/Emax")
         curve = pg.PlotCurveItem(x, y, pen=pg.mkPen('b', width=2))
         self.plot_widget.addItem(curve)

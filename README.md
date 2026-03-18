@@ -13,11 +13,12 @@ O projeto usa `PyQt6` para a interface e organiza o nucleo tecnico em modulos Py
 ## Estrutura
 
 - `main.py`: janela principal e orquestracao da UI
-- `core/antenna_models.py`: modelos de painel e arranjo, mais metricas do sistema
-- `core/math_funcs.py`: sintese 3D, soma coerente do arranjo e diretividade
-- `core/pattern_parser.py`: leitura de arquivos de padrao HRP e VRP
-- `core/exporters.py`: exportacao em texto, CSV, PRN e ATDI
-- `ui/`: widgets PyQt6 que reproduzem as areas funcionais do ADT
+- `models/antenna.py`: modelos de painel e arranjo
+- `parsers/patterns.py`: leitura de arquivos de padrao HRP e VRP
+- `solver/pattern_synthesis.py`: sintese 3D, soma coerente do arranjo e diretividade
+- `solver/system_metrics.py`: metricas de sistema derivadas do padrao sintetizado
+- `exports/pattern_exporters.py`: exportacao em texto, CSV, PRN e ATDI
+- `widgets/`: widgets PyQt6 que reproduzem as areas funcionais do ADT
 - `test_parsing.py`: smoke test do parser e da sintese basica
 
 ## Dependencias
@@ -52,6 +53,7 @@ Hoje o projeto ja contem:
 
 - shell principal da interface em PyQt6
 - widgets separados para Design Info, Pattern Library, Antenna Design, plots e resumo
+- pacotes separados para `models`, `parsers`, `solver`, `exports` e `widgets`
 - parser inicial de arquivos HRP/VRP
 - sintese 3D simplificada baseada em arrays complexos `numpy`
 - exportadores basicos para formatos tabulares
