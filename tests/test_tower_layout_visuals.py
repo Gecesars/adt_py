@@ -86,6 +86,41 @@ class TowerLayoutVisualTests(unittest.TestCase):
 
         self.assertGreater(inner_edge, outer_edge)
 
+    def test_top_view_preview_uses_compact_schematic_panel_proportions(self):
+        widget = TowerLayoutWidget()
+        widget.view_combo.setCurrentText("Top View")
+        widget.update_preview(
+            [
+                {
+                    "pattern_index": 1,
+                    "angle_deg": 0.0,
+                    "offset_m": 0.34,
+                    "elevation_m": 0.0,
+                    "azimuth_deg": 0.0,
+                    "tilt_deg": 0.0,
+                }
+            ],
+            {
+                1: {
+                    "width_m": 0.50,
+                    "height_m": 1.09,
+                    "depth_m": 0.22,
+                }
+            },
+        )
+
+        preview = widget.preview_widget
+        panel = preview.panels[0]
+        polygon = preview._panel_topdown_polygon(panel)
+        tower_polygon = preview._tower_topdown_polygon()
+
+        tower_width = ((tower_polygon[1][0] - tower_polygon[0][0]) ** 2 + (tower_polygon[1][1] - tower_polygon[0][1]) ** 2) ** 0.5
+        inner_edge = ((polygon[1][0] - polygon[0][0]) ** 2 + (polygon[1][1] - polygon[0][1]) ** 2) ** 0.5
+        panel_depth = (((polygon[2][0] + polygon[3][0]) / 2.0 - (polygon[0][0] + polygon[1][0]) / 2.0) ** 2 + (((polygon[2][1] + polygon[3][1]) / 2.0) - ((polygon[0][1] + polygon[1][1]) / 2.0)) ** 2) ** 0.5
+
+        self.assertLess(inner_edge, tower_width)
+        self.assertLess(panel_depth, panel.depth)
+
 
 if __name__ == "__main__":
     unittest.main()

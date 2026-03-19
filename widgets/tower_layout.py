@@ -127,6 +127,11 @@ class TowerPreviewWidget(QWidget):
         self.setAutoFillBackground(True)
         self.setObjectName("towerPreviewWidget")
 
+    def _topdown_tower_half_width(self):
+        # The original ADT top view is slightly schematic rather than a strict
+        # physical projection, so keep the tower a bit more prominent.
+        return self.tower_half_width_m * 1.08
+
     def set_scene(self, panels, tower_half_width_m=None):
         self.panels = list(panels)
         if tower_half_width_m is not None:
@@ -261,7 +266,7 @@ class TowerPreviewWidget(QWidget):
         return rotated_x, rotated_y
 
     def _tower_topdown_polygon(self):
-        half_width = self.tower_half_width_m
+        half_width = self._topdown_tower_half_width()
         points = [
             (-half_width, half_width),
             (half_width, half_width),
@@ -277,12 +282,32 @@ class TowerPreviewWidget(QWidget):
         tangent_x = math.cos(face_angle_rad)
         tangent_y = -math.sin(face_angle_rad)
 
-        inner_half_width = panel.width / 2.0
-        outer_half_width = max(panel.width * 0.18, inner_half_width * 0.72)
-        inner_center_x = panel.x - radial_x * panel.depth / 2.0
-        inner_center_y = panel.y - radial_y * panel.depth / 2.0
-        outer_center_x = panel.x + radial_x * panel.depth / 2.0
-        outer_center_y = panel.y + radial_y * panel.depth / 2.0
+        actual_radius = math.hypot(panel.x, panel.y)
+        visual_tower_half_width = self._topdown_tower_half_width()
+
+        # Match the original ADT preview better: the top view compresses panel
+        # depth and width visually while preserving orientation and relative order.
+        display_width = panel.width * 0.78
+        display_depth = max(panel.depth * 0.58, panel.width * 0.18)
+        inner_half_width = display_width / 2.0
+        outer_half_width = max(display_width * 0.28, inner_half_width * 0.68)
+
+        actual_inner_gap = max(
+            0.0,
+            actual_radius - panel.depth / 2.0 - self.tower_half_width_m,
+        )
+        display_inner_gap = min(0.014, 0.004 + actual_inner_gap * 0.35)
+        display_radius = (
+            visual_tower_half_width
+            + display_inner_gap
+            + display_depth / 2.0
+            + actual_inner_gap * 0.25
+        )
+
+        inner_center_x = radial_x * (display_radius - display_depth / 2.0)
+        inner_center_y = radial_y * (display_radius - display_depth / 2.0)
+        outer_center_x = radial_x * (display_radius + display_depth / 2.0)
+        outer_center_y = radial_y * (display_radius + display_depth / 2.0)
 
         points = [
             (
