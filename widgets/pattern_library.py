@@ -24,12 +24,17 @@ class PatternLibraryWidget(QWidget):
 
     def init_ui(self):
         layout = QVBoxLayout()
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
 
         self.table = QTableWidget(0, 2)
         self.table.setHorizontalHeaderLabels(["Property", "Value"])
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.table.setColumnWidth(0, 112)
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table.verticalHeader().setDefaultSectionSize(22)
 
         for index in range(1, self.pattern_count + 1):
             self.add_pattern_group(index)
@@ -95,7 +100,7 @@ class PatternLibraryWidget(QWidget):
                 path_input.setStyleSheet("border: 1px solid #ccc;")
 
                 browse_button = QPushButton("...")
-                browse_button.setFixedWidth(30)
+                browse_button.setMaximumWidth(30)
                 browse_button.clicked.connect(
                     lambda _checked, target=path_input: self.browse_file(target)
                 )

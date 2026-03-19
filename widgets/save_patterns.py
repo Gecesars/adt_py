@@ -2,16 +2,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from PyQt6.QtCore import QLocale, Qt, pyqtSignal
+from PyQt6.QtCore import QLocale, Qt, pyqtSignal, QSize
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QGroupBox,
+    QHeaderView,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -118,12 +120,14 @@ class SavePatternsWidget(QWidget):
         self._table: QTableWidget | None = None
         self._save_button: QPushButton | None = None
         self._build_ui()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
+        self.setMinimumWidth(0)
+        self.setMinimumHeight(0)
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(6)
-        self.setMinimumWidth(520)
+        layout.setSpacing(4)
 
         group = QGroupBox("Save Patterns")
         group.setStyleSheet(
@@ -142,9 +146,10 @@ class SavePatternsWidget(QWidget):
         )
         group_layout = QVBoxLayout(group)
         group_layout.setContentsMargins(4, 8, 4, 4)
-        group_layout.setSpacing(6)
+        group_layout.setSpacing(4)
 
         self._table = QTableWidget(16, 3)
+        self._table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._table.setAlternatingRowColors(False)
         self._table.setShowGrid(True)
         self._table.setWordWrap(False)
@@ -158,10 +163,12 @@ class SavePatternsWidget(QWidget):
         self._table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._table.setSizeAdjustPolicy(QAbstractItemView.SizeAdjustPolicy.AdjustToContents)
-        self._table.setColumnWidth(0, 34)
-        self._table.setColumnWidth(1, 340)
-        self._table.setColumnWidth(2, 138)
-        self._table.setMinimumHeight(490)
+        self._table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+        self._table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self._table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+        self._table.setColumnWidth(0, 30)
+        self._table.setColumnWidth(2, 124)
+        self._table.setMinimumHeight(0)
         self._table.setStyleSheet(
             """
             QTableWidget {
@@ -178,7 +185,7 @@ class SavePatternsWidget(QWidget):
         )
 
         for row in range(16):
-            self._table.setRowHeight(row, 29)
+            self._table.setRowHeight(row, 23)
 
         self._init_rows()
         group_layout.addWidget(self._table)
@@ -199,15 +206,15 @@ class SavePatternsWidget(QWidget):
         footer_layout.addWidget(self._resolution_combo, 1)
 
         self._save_button = QPushButton("Save Patterns")
-        self._save_button.setMinimumWidth(170)
+        self._save_button.setMinimumWidth(0)
         self._save_button.setStyleSheet(
             """
             QPushButton {
                 background-color: #1e88e5;
                 color: white;
                 font-weight: bold;
-                min-height: 28px;
-                padding: 4px 18px;
+                min-height: 24px;
+                padding: 3px 14px;
             }
             QPushButton:hover {
                 background-color: #1976d2;
@@ -220,6 +227,12 @@ class SavePatternsWidget(QWidget):
         group_layout.addLayout(footer_layout)
         layout.addWidget(group)
         layout.addStretch(1)
+
+    def minimumSizeHint(self):
+        return QSize(0, 0)
+
+    def sizeHint(self):
+        return QSize(520, 420)
 
     def _init_rows(self):
         for row, label in self._ROW_LABELS.items():

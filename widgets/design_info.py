@@ -1,16 +1,24 @@
 import sys
 from PyQt6.QtWidgets import (QWidget, QFormLayout, QLineEdit, QComboBox, 
-                             QSpinBox, QPushButton, QVBoxLayout, QLabel, QHBoxLayout)
-from PyQt6.QtCore import Qt
+                             QSpinBox, QPushButton, QVBoxLayout, QLabel, QHBoxLayout, QSizePolicy)
+from PyQt6.QtCore import Qt, QSize
 
 class DesignInfoWidget(QWidget):
     def __init__(self):
         super().__init__()
+        self.setMinimumWidth(0)
+        self.setMinimumHeight(0)
         self.init_ui()
         
     def init_ui(self):
         layout = QVBoxLayout()
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
         form_layout = QFormLayout()
+        form_layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        form_layout.setHorizontalSpacing(8)
+        form_layout.setVerticalSpacing(4)
         
         # Customer
         self.customer_input = QLineEdit()
@@ -62,15 +70,23 @@ class DesignInfoWidget(QWidget):
         
         # --- System Losses ---
         self.internal_loss_input = QLineEdit("0.5")
+        self.internal_loss_input.setReadOnly(True)
+        self.internal_loss_input.setToolTip("Managed by Site Details")
         form_layout.addRow("Internal Loss (dB)", self.internal_loss_input)
         
         self.pol_loss_input = QLineEdit("3.0")
+        self.pol_loss_input.setReadOnly(True)
+        self.pol_loss_input.setToolTip("Managed by Site Details")
         form_layout.addRow("Polarisation Loss (dB)", self.pol_loss_input)
         
         self.filter_loss_input = QLineEdit("0.8")
+        self.filter_loss_input.setReadOnly(True)
+        self.filter_loss_input.setToolTip("Managed by Site Details")
         form_layout.addRow("Filter/Combiner Loss (dB)", self.filter_loss_input)
         
         self.feeder_loss_input = QLineEdit("1.2")
+        self.feeder_loss_input.setReadOnly(True)
+        self.feeder_loss_input.setToolTip("Calculated from Site Details")
         form_layout.addRow("Main Feeder Loss (dB)", self.feeder_loss_input)
         
         layout.addLayout(form_layout)
@@ -78,12 +94,13 @@ class DesignInfoWidget(QWidget):
         # Calculate 3D Pattern Button
         calc_layout = QVBoxLayout()
         self.calc_btn = QPushButton("Calculate 3D Pattern")
+        self.calc_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.calc_btn.setStyleSheet("""
             background-color: #00A651; 
             color: white; 
             font-weight: bold; 
-            padding: 5px;
-            font-size: 11px;
+            padding: 3px;
+            font-size: 10px;
         """)
         calc_layout.addWidget(self.calc_btn)
         calc_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -92,3 +109,9 @@ class DesignInfoWidget(QWidget):
         layout.addStretch()
         
         self.setLayout(layout)
+
+    def minimumSizeHint(self):
+        return QSize(0, 0)
+
+    def sizeHint(self):
+        return QSize(420, 320)

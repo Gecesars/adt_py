@@ -1,14 +1,18 @@
 import sys
+import json
+import numpy as np
 from datetime import datetime
 from pathlib import Path
+from base64 import b64decode, b64encode
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QTabWidget, QDockWidget, QMenuBar, QMenu, QStatusBar,
                              QHBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem,
-                             QHeaderView, QPushButton, QLabel, QSplitter,
+                             QHeaderView, QPushButton, QLabel, QSplitter, QSizePolicy,
                              QFileDialog, QMessageBox)
-from PyQt6.QtCore import Qt, QLocale, QTimer
+from PyQt6.QtCore import Qt, QLocale, QTimer, QByteArray
+from PyQt6.QtGui import QCloseEvent, QFont
 
-from catalogs import OriginalAdtCatalog
+from catalogs import CableCatalog, OriginalAdtCatalog
 from solver.pattern_synthesis import (
     compute_hrp_cut_directivity_db,
     compute_vrp_cut_directivity_db,
@@ -20,6 +24,7 @@ from solver.pattern_synthesis import (
 # Import widget components
 from widgets.design_info import DesignInfoWidget
 from widgets.pattern_library import PatternLibraryWidget
+from widgets.site_details import SiteDetailsWidget
 from widgets.antenna_design import AntennaDesignWidget
 from widgets.tower_layout import TowerLayoutWidget
 from widgets.compensation import CompensationWidget
@@ -27,11 +32,13 @@ from widgets.radiation_plots import (
     HrpPlotWidget,
     VrpPlotWidget,
     display_to_internal_azimuth,
+    internal_to_display_azimuth,
 )
 from widgets.result_summary import ResultSummaryWidget
 from widgets.save_patterns import SavePatternsSettings, SavePatternsWidget
 from widgets.message_list import MessageListWidget
 from widgets.beam_shape import BeamShapeWidget
+from widgets.splitter_utils import enable_free_resize
 
 
 def _parse_float_text(value, default):
@@ -44,11 +51,14 @@ def _parse_float_text(value, default):
 
 
 class ADTMainWindow(QMainWindow):
+    CURRENT_LAYOUT_VERSION = 7
+
     def __init__(self):
         super().__init__()
         QLocale.setDefault(QLocale.c())
         self.setWindowTitle("Antenna Design Tool (ADT) - Python Version")
-        self.resize(1400, 900)
+        self.resize(1700, 980)
+        self.layout_file_path = Path(__file__).resolve().with_name(".adt_py_layout.json")
         self.last_project = None
         self.last_mag_3d = None
         self.last_az_angles = None
@@ -64,7 +74,12 @@ class ADTMainWindow(QMainWindow):
             self.original_adt_catalog = OriginalAdtCatalog()
         except Exception:
             self.original_adt_catalog = None
-        
+        try:
+            self.cable_catalog = CableCatalog()
+        except Exception:
+            self.cable_catalog = None
+
+        self._apply_visual_style()
         self.init_menu()
         self.init_ui()
         self.init_catalog_bindings()
@@ -72,7 +87,111 @@ class ADTMainWindow(QMainWindow):
         self.refresh_beam_shape_frequency()
         self._sync_design_panel_count_from_array()
         self.refresh_tower_layout_preview()
-        QTimer.singleShot(0, self._apply_legacy_window_proportions)
+        QTimer.singleShot(0, self._restore_saved_layout_or_defaults)
+
+    def _apply_visual_style(self):
+        app = QApplication.instance()
+        if app is not None:
+            font = QFont("Segoe UI")
+            font.setPointSizeF(8.5)
+            app.setFont(font)
+            app.setStyleSheet(
+                """
+                QMainWindow, QWidget {
+                    color: #000000;
+                    font-size: 8.5pt;
+                }
+                QMenuBar {
+                    background: #f0f0f0;
+                    border-bottom: 1px solid #ababab;
+                }
+                QMenuBar::item {
+                    padding: 2px 7px;
+                    background: transparent;
+                }
+                QMenuBar::item:selected {
+                    background: #dbe6f5;
+                }
+                QMenu {
+                    background: #ffffff;
+                    border: 1px solid #b8b8b8;
+                }
+                QMenu::item:selected {
+                    background: #dbe6f5;
+                }
+                QDockWidget::title {
+                    background: #d6d6d6;
+                    border: 1px solid #a7a7a7;
+                    padding: 2px 6px;
+                    font-weight: 600;
+                    color: #000000;
+                }
+                QTabWidget::pane {
+                    border: 1px solid #afafaf;
+                    background: #f7f7f7;
+                    top: -1px;
+                }
+                QTabBar::tab {
+                    background: #ededed;
+                    border: 1px solid #afafaf;
+                    padding: 3px 8px;
+                    min-width: 76px;
+                }
+                QTabBar::tab:selected {
+                    background: #ffffff;
+                }
+                QGroupBox {
+                    font-weight: 600;
+                }
+                QHeaderView::section {
+                    background: #efefef;
+                    color: #000000;
+                    border: 1px solid #b6b6b6;
+                    padding: 2px 4px;
+                }
+                QTableWidget, QTableView, QLineEdit, QAbstractSpinBox, QComboBox {
+                    background: #ffffff;
+                    color: #000000;
+                    border: 1px solid #afafaf;
+                    selection-background-color: #dbeafe;
+                    selection-color: #000000;
+                }
+                QTableWidget::item, QTableView::item {
+                    padding: 1px 3px;
+                }
+                QLineEdit, QAbstractSpinBox, QComboBox {
+                    min-height: 20px;
+                    padding: 1px 4px;
+                }
+                QLabel {
+                    color: #000000;
+                }
+                QSplitter::handle {
+                    background: #b0b0b0;
+                    border: 1px solid #7e7e7e;
+                }
+                QSplitter::handle:hover {
+                    background: #5f8fcf;
+                }
+                QSplitter::handle:horizontal {
+                    width: 10px;
+                    margin: 0 1px;
+                }
+                QSplitter::handle:vertical {
+                    height: 10px;
+                    margin: 1px 0;
+                }
+                QMainWindow::separator {
+                    background: #b0b0b0;
+                    width: 10px;
+                    height: 10px;
+                    border: 1px solid #7e7e7e;
+                }
+                QMainWindow::separator:hover {
+                    background: #5f8fcf;
+                }
+                """
+            )
         
     def init_menu(self):
         menubar = self.menuBar()
@@ -162,6 +281,7 @@ class ADTMainWindow(QMainWindow):
         act_view_vrp_ii = QAction("Vertical Radiation Pattern II", self)
         act_view_blackspot = QAction("Blackspot Viewer", self)
         act_view_exposure = QAction("Power Density Calculation and Human Exposure Level Analysis", self)
+        act_view_save_layout = QAction("Save Layout", self)
         
         view_menu.addAction(act_view_design_info)
         view_menu.addAction(act_view_site_details)
@@ -174,6 +294,8 @@ class ADTMainWindow(QMainWindow):
         view_menu.addAction(act_view_vrp_ii)
         view_menu.addAction(act_view_blackspot)
         view_menu.addAction(act_view_exposure)
+        view_menu.addSeparator()
+        view_menu.addAction(act_view_save_layout)
         
         # Wire View actions to lambda functions targeting the tabs/docks
         # Note: the lambda uses a trick passing `self` to avoid late-binding issues, though not strictly necessary here
@@ -185,9 +307,10 @@ class ADTMainWindow(QMainWindow):
         act_view_tower_layout.triggered.connect(lambda: self._focus_tab(self.central_tabs, 1))
         act_view_imp_comp.triggered.connect(lambda: self._focus_tab(self.central_tabs, 2))
         
-        act_view_result_summary.triggered.connect(lambda: self.dock_result_summary.show())
+        act_view_result_summary.triggered.connect(lambda: self._focus_tab(self.right_bottom_tabs, 0))
         
         act_view_memory_trace.triggered.connect(lambda: self._focus_tab(self.right_bottom_tabs, 2))
+        act_view_save_layout.triggered.connect(self.on_view_save_layout)
         
         # --- PLOT MENU ---
         act_plot_save_hrp_jpg = QAction("Save Displayed HRP to File (jpg)", self)
@@ -351,27 +474,49 @@ class ADTMainWindow(QMainWindow):
         self.setStatusBar(QStatusBar(self))
         
     def _focus_tab(self, tab_widget, index):
-        """Helper to safely focus and show a tab."""
-        if hasattr(self, 'dock_left_top') and tab_widget == self.left_tabs:
-            self.dock_left_top.show()
-        if hasattr(self, 'dock_messages') and tab_widget == self.right_bottom_tabs:
-            self.dock_messages.show()
         tab_widget.setCurrentIndex(index)
 
-    def init_ui(self):
-        # --- CENTRAL WIDGET (Top: Tabs for Design/Layout, Bottom: Radiation Plots) ---
-        central_widget = QWidget()
-        central_layout = QVBoxLayout(central_widget)
-        central_layout.setContentsMargins(0, 0, 0, 0)
-        central_layout.setSpacing(0)
+    def _create_side_section(self, title, widget):
+        section = QWidget()
+        section.setMinimumWidth(0)
+        section.setMinimumHeight(0)
+        section.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
+        layout = QVBoxLayout(section)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
+        header = QLabel(title)
+        header.setStyleSheet(
+            """
+            QLabel {
+                background: #d6d6d6;
+                color: #000000;
+                border: 1px solid #a7a7a7;
+                border-bottom: none;
+                font-weight: 600;
+                padding: 2px 6px;
+                min-height: 18px;
+            }
+            """
+        )
+        layout.addWidget(header)
+        widget.setMinimumWidth(0)
+        widget.setMinimumHeight(0)
+        layout.addWidget(widget, 1)
+        section.section_header = header
+        return section
+
+    def init_ui(self):
+        self.setDockNestingEnabled(False)
         central_splitter = QSplitter(Qt.Orientation.Vertical)
-        central_splitter.setChildrenCollapsible(False)
-        central_splitter.setHandleWidth(5)
+        central_splitter.setHandleWidth(8)
         self.central_splitter = central_splitter
 
         # Central Top Tabs
         self.central_tabs = QTabWidget()
+        self._configure_tab_widget(self.central_tabs)
+        self.central_tabs.setMinimumWidth(0)
+        self.central_tabs.setMinimumHeight(0)
         self.antenna_design_tab = AntennaDesignWidget()
         self.central_tabs.addTab(self.antenna_design_tab, "Antenna Design Details")
         self.tower_layout_tab = TowerLayoutWidget()
@@ -382,8 +527,7 @@ class ADTMainWindow(QMainWindow):
 
         # Central Bottom Plots (Horizontal Split)
         plots_splitter = QSplitter(Qt.Orientation.Horizontal)
-        plots_splitter.setChildrenCollapsible(False)
-        plots_splitter.setHandleWidth(5)
+        plots_splitter.setHandleWidth(8)
         self.plots_splitter = plots_splitter
 
         self.hrp_widget = HrpPlotWidget()
@@ -405,93 +549,129 @@ class ADTMainWindow(QMainWindow):
         plots_splitter.setSizes([700, 700])
         plots_splitter.setStretchFactor(0, 1)
         plots_splitter.setStretchFactor(1, 1)
+        enable_free_resize(plots_splitter)
         central_splitter.addWidget(plots_splitter)
         central_splitter.setSizes([560, 340])
         central_splitter.setStretchFactor(0, 5)
         central_splitter.setStretchFactor(1, 3)
+        enable_free_resize(central_splitter)
 
-        central_layout.addWidget(central_splitter)
-        self.setCentralWidget(central_widget)
-        
-        # --- LEFT DOCKS (Top: Design Info Tabs, Bottom: Pattern Library) ---
-        self.dock_left_top = QDockWidget("Design Information", self)
-        # Wrap Design Info in a TabWidget to match the reference "Design Information | Site Details | Save Patterns"
+        # --- LEFT COLUMN ---
         self.left_tabs = QTabWidget()
+        self._configure_tab_widget(self.left_tabs)
+        self.left_tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
+        self.left_tabs.setMinimumWidth(0)
+        self.left_tabs.setMinimumHeight(0)
         self.design_info_widget = DesignInfoWidget()
+        self.site_details_widget = SiteDetailsWidget(self.cable_catalog)
         self.save_patterns_widget = SavePatternsWidget()
         self.left_tabs.addTab(self.design_info_widget, "Design Information")
-        self.left_tabs.addTab(QWidget(), "Site Details")
+        self.left_tabs.addTab(self.site_details_widget, "Site Details")
         self.left_tabs.addTab(self.save_patterns_widget, "Save Patterns")
-        self.dock_left_top.setWidget(self.left_tabs)
-        self.dock_left_top.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
-        self.dock_left_top.setMinimumWidth(500)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.dock_left_top)
-        
-        self.dock_pattern_lib = QDockWidget("Pattern Library", self)
         self.pattern_library_widget = PatternLibraryWidget()
-        self.dock_pattern_lib.setWidget(self.pattern_library_widget)
-        self.dock_pattern_lib.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
-        self.dock_pattern_lib.setMinimumWidth(500)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.dock_pattern_lib)
-        
-        self.splitDockWidget(self.dock_left_top, self.dock_pattern_lib, Qt.Orientation.Vertical)
-        
-        # --- RIGHT DOCKS (Top: Result Summary, Middle: Point Info/Find, Bottom: Message List Tabs) ---
-        self.dock_result_summary = QDockWidget("Result Summary", self)
-        self.dock_result_summary.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+
+        left_column_widget = QWidget()
+        left_column_layout = QVBoxLayout(left_column_widget)
+        left_column_layout.setContentsMargins(0, 0, 0, 0)
+        left_column_layout.setSpacing(0)
+        self.left_column_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.left_column_splitter.setHandleWidth(10)
+        self.left_top_section = self._create_side_section("Design Information", self.left_tabs)
+        self.left_library_section = self._create_side_section("Pattern Library", self.pattern_library_widget)
+        self.left_column_splitter.addWidget(self.left_top_section)
+        self.left_column_splitter.addWidget(self.left_library_section)
+        enable_free_resize(self.left_column_splitter)
+        left_column_layout.addWidget(self.left_column_splitter)
+        left_column_widget.setMinimumWidth(0)
+
+        # --- RIGHT COLUMN (Top: Result Summary / Beam Shape / Memory / Distance, Bottom: Message List) ---
         self.result_summary_widget = ResultSummaryWidget()
-        self.dock_result_summary.setWidget(self.result_summary_widget)
-        self.dock_result_summary.setMinimumWidth(330)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_result_summary)
-        
-        # Point Info (Azimuth, Elevation, Relative Field, Power from Peak) + Find Button
-        from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QPushButton, QLabel
-        self.dock_point_info = QDockWidget("Point Info", self)
-        self.dock_point_info.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
-        self.dock_point_info.setMinimumWidth(330)
-        point_widget = QWidget()
-        point_layout = QVBoxLayout(point_widget)
-        point_layout.setContentsMargins(0, 0, 0, 0)
-        
-        point_table = QTableWidget(1, 4)
-        point_table.setHorizontalHeaderLabels(["Azimuth\nAngle", "Elevation\nAngle", "Relative Field\n(E/Emax)", "Power from\nPeak (dB)"])
-        point_table.verticalHeader().setVisible(False)
-        point_table.setItem(0, 0, QTableWidgetItem("359"))
-        point_table.setItem(0, 1, QTableWidgetItem("0.0"))
-        point_table.setItem(0, 2, QTableWidgetItem("1.0000"))
-        point_table.setItem(0, 3, QTableWidgetItem("0.00"))
-        point_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        point_layout.addWidget(point_table)
-        
-        find_layout = QHBoxLayout()
-        find_layout.addStretch()
-        find_btn = QPushButton("Find")
-        find_btn.setStyleSheet("background-color: #0078D7; color: white; font-weight: bold; width: 80px;")
-        find_layout.addWidget(find_btn)
-        point_layout.addLayout(find_layout)
-        
-        self.dock_point_info.setWidget(point_widget)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_point_info)
-        
-        self.dock_messages = QDockWidget("Messages", self)
-        self.dock_messages.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
-        self.dock_messages.setMinimumWidth(330)
+        self.result_summary_widget.setMinimumWidth(0)
+        self.result_summary_widget.setMinimumHeight(0)
+        self.result_summary_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Ignored,
+        )
         self.right_bottom_tabs = QTabWidget()
-        self.message_list_widget = MessageListWidget()
+        self._configure_tab_widget(self.right_bottom_tabs)
+        self.right_bottom_tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
+        self.right_bottom_tabs.setMinimumWidth(0)
+        self.right_bottom_tabs.setMinimumHeight(0)
         self.beam_shape_widget = BeamShapeWidget()
-        self.right_bottom_tabs.addTab(self.message_list_widget, "Result Su...")
+        self.right_bottom_tabs.addTab(self.result_summary_widget, "Result Su...")
         self.right_bottom_tabs.addTab(self.beam_shape_widget, "Beam Sh...")
         self.right_bottom_tabs.addTab(QWidget(), "Memory...")
         self.right_bottom_tabs.addTab(QWidget(), "Distance...")
-        self.dock_messages.setWidget(self.right_bottom_tabs)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_messages)
-        
-        self.splitDockWidget(self.dock_result_summary, self.dock_point_info, Qt.Orientation.Vertical)
-        self.splitDockWidget(self.dock_point_info, self.dock_messages, Qt.Orientation.Vertical)
+        self.right_bottom_tabs.currentChanged.connect(self._sync_right_pane_title)
+        self.message_list_widget = MessageListWidget()
+        self.message_list_widget.setMinimumWidth(0)
+        self.message_list_widget.setMinimumHeight(0)
+        self.message_list_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Ignored,
+        )
+        right_column_widget = QWidget()
+        right_column_layout = QVBoxLayout(right_column_widget)
+        right_column_layout.setContentsMargins(0, 0, 0, 0)
+        right_column_layout.setSpacing(0)
+        self.right_column_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.right_column_splitter.setHandleWidth(10)
+        self.right_top_section = self._create_side_section("Result Summary", self.right_bottom_tabs)
+        self.right_message_section = self._create_side_section("Message List", self.message_list_widget)
+        self.right_column_splitter.addWidget(self.right_top_section)
+        self.right_column_splitter.addWidget(self.right_message_section)
+        enable_free_resize(self.right_column_splitter)
+        right_column_layout.addWidget(self.right_column_splitter)
+        right_column_widget.setMinimumWidth(0)
+
+        # --- ROOT HORIZONTAL SPLITTER (Left / Center / Right) ---
+        root_widget = QWidget()
+        root_layout = QVBoxLayout(root_widget)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+
+        self.main_horizontal_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.main_horizontal_splitter.setHandleWidth(12)
+        self.main_horizontal_splitter.setStyleSheet(
+            """
+            QSplitter::handle {
+                background: #b0b0b0;
+                border-left: 1px solid #7e7e7e;
+                border-right: 1px solid #e4e4e4;
+            }
+            QSplitter::handle:hover {
+                background: #5f8fcf;
+            }
+            """
+        )
+        self.main_horizontal_splitter.addWidget(left_column_widget)
+        self.main_horizontal_splitter.addWidget(central_splitter)
+        self.main_horizontal_splitter.addWidget(right_column_widget)
+        self.main_horizontal_splitter.setStretchFactor(0, 0)
+        self.main_horizontal_splitter.setStretchFactor(1, 1)
+        self.main_horizontal_splitter.setStretchFactor(2, 0)
+        enable_free_resize(self.main_horizontal_splitter)
+        root_layout.addWidget(self.main_horizontal_splitter)
+        self.setCentralWidget(root_widget)
+
+        # Compatibility aliases for existing logic
+        self.dock_left_top = self.left_top_section
+        self.dock_pattern_lib = self.left_library_section
+        self.dock_result_summary = self.right_top_section
+        self.dock_point_info = self.result_summary_widget
+        self.dock_messages = self.right_message_section
+        self._sync_right_pane_title()
 
         # Wiring logic
         # DesignInfo is now inside a QTabWidget which is inside self.dock_left_top
         self.design_info_widget.calc_btn.clicked.connect(self.on_calculate_clicked)
+        self.site_details_widget.values_changed.connect(self._on_site_details_changed)
+        self.site_details_widget.feeder_loss_changed.connect(
+            lambda _value: self._sync_site_details_to_design_info()
+        )
+        self.site_details_widget.error_generated.connect(
+            lambda message: self._add_message(f"Site details: {message}")
+        )
         self.save_patterns_widget.save_requested.connect(self.on_save_patterns_requested)
         self.save_patterns_widget.error_requested.connect(self.on_save_patterns_error)
         self.hrp_widget.elevation_changed.connect(self.on_hrp_elevation_changed)
@@ -516,32 +696,120 @@ class ADTMainWindow(QMainWindow):
             self.on_tower_geometry_generate_requested
         )
         self.central_tabs.currentChanged.connect(self._on_central_tab_changed)
+        self._refresh_site_feeder_loss()
+        self._sync_site_details_to_design_info()
 
     def _apply_legacy_window_proportions(self):
-        self.resizeDocks(
-            [self.dock_left_top, self.dock_pattern_lib],
-            [580, 360],
-            Qt.Orientation.Vertical,
-        )
-        self.resizeDocks(
-            [self.dock_result_summary, self.dock_point_info, self.dock_messages],
-            [250, 230, 430],
-            Qt.Orientation.Vertical,
-        )
-        self.resizeDocks(
-            [self.dock_left_top, self.dock_result_summary],
-            [520, 360],
-            Qt.Orientation.Horizontal,
-        )
-        self.central_splitter.setSizes([590, 310])
+        self.main_horizontal_splitter.setSizes([430, 980, 300])
+        self.left_column_splitter.setSizes([530, 310])
+        self.right_column_splitter.setSizes([620, 260])
+        self.central_splitter.setSizes([620, 280])
         self.plots_splitter.setSizes([1, 1])
+
+    def _sync_right_pane_title(self, *_args):
+        titles = [
+            "Result Summary",
+            "Beam Shape",
+            "Memory Trace",
+            "Distance and Bearing",
+        ]
+        index = self.right_bottom_tabs.currentIndex() if hasattr(self, "right_bottom_tabs") else 0
+        if hasattr(self, "right_top_section"):
+            self.right_top_section.section_header.setText(
+                titles[index] if 0 <= index < len(titles) else "Result Summary"
+            )
+
+    def _configure_tab_widget(self, tab_widget):
+        tab_widget.setUsesScrollButtons(True)
+        tab_widget.tabBar().setMovable(False)
+        tab_widget.tabBar().setExpanding(False)
+        tab_widget.tabBar().setDocumentMode(False)
+
+    def _layout_payload(self):
+        return {
+            "layout_version": self.CURRENT_LAYOUT_VERSION,
+            "geometry": b64encode(bytes(self.saveGeometry())).decode("ascii"),
+            "main_horizontal_state": b64encode(bytes(self.main_horizontal_splitter.saveState())).decode("ascii"),
+            "left_column_state": b64encode(bytes(self.left_column_splitter.saveState())).decode("ascii"),
+            "right_column_state": b64encode(bytes(self.right_column_splitter.saveState())).decode("ascii"),
+            "central_state": b64encode(bytes(self.central_splitter.saveState())).decode("ascii"),
+            "plots_state": b64encode(bytes(self.plots_splitter.saveState())).decode("ascii"),
+            "left_tab_index": self.left_tabs.currentIndex(),
+            "central_tab_index": self.central_tabs.currentIndex(),
+            "right_bottom_tab_index": self.right_bottom_tabs.currentIndex(),
+        }
+
+    def _save_layout_to_disk(self):
+        self.layout_file_path.write_text(
+            json.dumps(self._layout_payload(), indent=2),
+            encoding="utf-8",
+        )
+
+    def _restore_saved_layout(self):
+        if not self.layout_file_path.exists():
+            return False
+        try:
+            payload = json.loads(self.layout_file_path.read_text(encoding="utf-8"))
+            if int(payload.get("layout_version", 0)) != self.CURRENT_LAYOUT_VERSION:
+                return False
+            geometry_data = payload.get("geometry")
+            main_horizontal_state = payload.get("main_horizontal_state")
+            left_column_state = payload.get("left_column_state")
+            right_column_state = payload.get("right_column_state")
+            central_state = payload.get("central_state")
+            plots_state = payload.get("plots_state")
+            if geometry_data:
+                self.restoreGeometry(QByteArray(b64decode(geometry_data)))
+            restored = False
+            if main_horizontal_state:
+                restored = self.main_horizontal_splitter.restoreState(
+                    QByteArray(b64decode(main_horizontal_state))
+                )
+            if left_column_state:
+                self.left_column_splitter.restoreState(QByteArray(b64decode(left_column_state)))
+            if right_column_state:
+                self.right_column_splitter.restoreState(QByteArray(b64decode(right_column_state)))
+            if central_state:
+                self.central_splitter.restoreState(QByteArray(b64decode(central_state)))
+            if plots_state:
+                self.plots_splitter.restoreState(QByteArray(b64decode(plots_state)))
+            self.left_tabs.setCurrentIndex(int(payload.get("left_tab_index", 0)))
+            self.central_tabs.setCurrentIndex(int(payload.get("central_tab_index", 0)))
+            self.right_bottom_tabs.setCurrentIndex(int(payload.get("right_bottom_tab_index", 0)))
+            return restored or bool(geometry_data)
+        except Exception:
+            return False
+
+    def _restore_saved_layout_or_defaults(self):
+        if not self._restore_saved_layout():
+            self._apply_legacy_window_proportions()
+        self.showMaximized()
+
+    def on_view_save_layout(self):
+        try:
+            self._save_layout_to_disk()
+            self._add_message("Layout saved.")
+            QMessageBox.information(
+                self,
+                "Save Layout",
+                f"Layout saved to\n{self.layout_file_path}",
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Save Layout", f"Could not save layout:\n{exc}")
+
+    def closeEvent(self, event: QCloseEvent):
+        try:
+            self._save_layout_to_disk()
+        except Exception:
+            pass
+        super().closeEvent(event)
 
     def init_catalog_bindings(self):
         self.design_info_widget.design_freq_input.editingFinished.connect(
             self._on_design_frequency_changed
         )
         self.design_info_widget.channel_freq_input.editingFinished.connect(
-            self.refresh_predefined_panel_catalog
+            self._on_channel_frequency_changed
         )
         self.design_info_widget.polarisation_combo.currentTextChanged.connect(
             lambda _text: self.refresh_predefined_panel_catalog()
@@ -550,6 +818,39 @@ class ADTMainWindow(QMainWindow):
     def _on_design_frequency_changed(self):
         self.refresh_predefined_panel_catalog()
         self.refresh_beam_shape_frequency()
+
+    def _on_channel_frequency_changed(self):
+        self.refresh_predefined_panel_catalog()
+        self._refresh_site_feeder_loss()
+
+    def _refresh_site_feeder_loss(self):
+        if not hasattr(self, "site_details_widget"):
+            return
+        frequency_mhz = _parse_float_text(
+            self.design_info_widget.channel_freq_input.text(),
+            539.0,
+        )
+        self.site_details_widget.set_channel_frequency_mhz(frequency_mhz)
+        self._sync_site_details_to_design_info()
+
+    def _sync_site_details_to_design_info(self):
+        if not hasattr(self, "site_details_widget") or not hasattr(self, "design_info_widget"):
+            return
+        self.design_info_widget.internal_loss_input.setText(
+            f"{self.site_details_widget.internal_loss_spin.value():g}"
+        )
+        self.design_info_widget.pol_loss_input.setText(
+            f"{self.site_details_widget.polar_loss_spin.value():g}"
+        )
+        self.design_info_widget.filter_loss_input.setText(
+            f"{self.site_details_widget.filter_loss_spin.value():g}"
+        )
+        self.design_info_widget.feeder_loss_input.setText(
+            f"{self.site_details_widget.computed_feeder_loss_db:g}"
+        )
+
+    def _on_site_details_changed(self):
+        self._sync_site_details_to_design_info()
 
     def _on_central_tab_changed(self, index):
         if self.central_tabs.widget(index) is self.tower_layout_tab:
@@ -667,19 +968,68 @@ class ADTMainWindow(QMainWindow):
             self.selected_vrp_azimuth_deg = vrp_azimuth
         self.hrp_widget.set_selected_azimuth(vrp_azimuth)
 
+    def _current_displayed_elevation(self):
+        if self.selected_hrp_elevation_deg is not None:
+            return float(self.selected_hrp_elevation_deg)
+        if isinstance(self.last_metrics, dict):
+            return float(self.last_metrics.get("_hrp_cut_elevation_deg", 0.0))
+        return 0.0
+
+    def _current_displayed_azimuth(self):
+        if self.selected_vrp_azimuth_deg is not None:
+            return float(self.selected_vrp_azimuth_deg)
+        if isinstance(self.last_metrics, dict):
+            return float(self.last_metrics.get("_vrp_cut_azimuth_deg", 0.0))
+        return 0.0
+
+    def _update_point_info_from_current_cuts(self):
+        if self.last_mag_3d is None or self.last_az_angles is None or self.last_el_angles is None:
+            self.result_summary_widget.set_point_info("", "", "", "")
+            return
+
+        azimuth_deg = self._current_displayed_azimuth()
+        elevation_deg = self._current_displayed_elevation()
+        azimuth_angles = self.last_az_angles
+        elevation_angles = self.last_el_angles
+
+        azimuth_index = int(np.argmin(np.abs(azimuth_angles - azimuth_deg)))
+        elevation_index = int(np.argmin(np.abs(elevation_angles - elevation_deg)))
+
+        actual_azimuth_deg = float(azimuth_angles[azimuth_index])
+        actual_elevation_deg = float(elevation_angles[elevation_index])
+        relative_field = float(self.last_mag_3d[azimuth_index, elevation_index])
+        power_from_peak_db = 20.0 * np.log10(max(relative_field, 1e-12))
+
+        self.result_summary_widget.set_point_info(
+            f"{internal_to_display_azimuth(actual_azimuth_deg):.0f}",
+            f"{actual_elevation_deg:.1f}",
+            f"{relative_field:.4f}",
+            f"{power_from_peak_db:.2f}",
+        )
+
+    def _refresh_displayed_pattern_cuts(self, elevation_deg=None, azimuth_deg=None):
+        current_elevation = (
+            self._current_displayed_elevation() if elevation_deg is None else float(elevation_deg)
+        )
+        current_azimuth = (
+            self._current_displayed_azimuth() if azimuth_deg is None else float(azimuth_deg)
+        )
+
+        self._refresh_hrp_plot(current_elevation)
+        self._refresh_vrp_plot(current_azimuth)
+        self.vrp_widget.set_selected_elevation(float(self.hrp_widget.angle_spin.value()))
+        self._update_point_info_from_current_cuts()
+
     def on_hrp_elevation_changed(self, elevation_deg):
         self.selected_hrp_elevation_deg = float(elevation_deg)
         self.lock_hrp_elevation = True
-        self._refresh_hrp_plot(elevation_deg=elevation_deg)
+        self._refresh_displayed_pattern_cuts(elevation_deg=elevation_deg)
 
     def on_vrp_azimuth_changed(self, azimuth_deg):
         internal_azimuth_deg = display_to_internal_azimuth(azimuth_deg)
         self.selected_vrp_azimuth_deg = float(internal_azimuth_deg)
         self.lock_vrp_azimuth = True
-        self.hrp_widget.set_selected_azimuth(internal_azimuth_deg)
-        self._refresh_vrp_plot(
-            azimuth_deg=internal_azimuth_deg
-        )
+        self._refresh_displayed_pattern_cuts(azimuth_deg=internal_azimuth_deg)
 
     def on_beam_shape_message(self, message):
         self._add_message(message)
@@ -793,6 +1143,7 @@ class ADTMainWindow(QMainWindow):
         try:
             project = build_project_from_ui(
                 self.design_info_widget,
+                self.site_details_widget,
                 self.antenna_design_tab,
                 self.pattern_library_widget,
             )
@@ -815,8 +1166,7 @@ class ADTMainWindow(QMainWindow):
                 if self.lock_vrp_azimuth and self.selected_vrp_azimuth_deg is not None
                 else metrics.get("_vrp_cut_azimuth_deg")
             )
-            self._refresh_hrp_plot(hrp_elevation)
-            self._refresh_vrp_plot(vrp_azimuth)
+            self._refresh_displayed_pattern_cuts(hrp_elevation, vrp_azimuth)
             self.refresh_tower_layout_preview()
             self._add_message(
                 "Calculated 3D pattern and refreshed HRP/VRP displays from the 3D field."
@@ -846,11 +1196,13 @@ class ADTMainWindow(QMainWindow):
                 apply_project_to_ui(
                     project,
                     self.design_info_widget,
+                    self.site_details_widget,
                     self.antenna_design_tab,
                     self.pattern_library_widget,
                 )
                 self.refresh_predefined_panel_catalog()
                 self.refresh_beam_shape_frequency()
+                self._refresh_site_feeder_loss()
                 self.total_rotation_angle = 0.0
                 self.total_tilt_actions.clear()
                 self._invalidate_calculation_outputs()
@@ -879,6 +1231,7 @@ class ADTMainWindow(QMainWindow):
                     path += ".adpy.json"
                 project = build_project_from_ui(
                     self.design_info_widget,
+                    self.site_details_widget,
                     self.antenna_design_tab,
                     self.pattern_library_widget,
                 )
@@ -930,6 +1283,7 @@ class ADTMainWindow(QMainWindow):
         try:
             project = build_project_from_ui(
                 self.design_info_widget,
+                self.site_details_widget,
                 self.antenna_design_tab,
                 self.pattern_library_widget,
             )

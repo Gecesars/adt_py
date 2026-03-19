@@ -1,3 +1,4 @@
+from .cable_catalog import CableCatalog, CableRatingPoint
 from .original_adt_catalog import (
     OriginalAdtCatalog,
     PredefinedPanelEntry,

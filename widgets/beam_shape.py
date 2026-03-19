@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QGroupBox,
+    QHeaderView,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QRadioButton,
+    QSizePolicy,
     QSpinBox,
     QSplitter,
     QTableWidget,
@@ -21,6 +23,7 @@ from solver.beam_shape_solver import (
     calculate_beam_shape_phases,
     format_phase_value,
 )
+from widgets.splitter_utils import enable_free_resize
 
 
 class BeamShapeWidget(QWidget):
@@ -39,28 +42,50 @@ class BeamShapeWidget(QWidget):
         super().__init__()
         self.current_result: BeamShapeResult | None = None
         self.init_ui()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
+        self.setMinimumWidth(0)
+        self.setMinimumHeight(0)
 
     def init_ui(self):
         main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(4, 4, 4, 4)
+        main_layout.setContentsMargins(2, 2, 2, 2)
+        main_layout.setSpacing(2)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setChildrenCollapsible(False)
-        splitter.setHandleWidth(4)
+        self.main_splitter = splitter
+        splitter.setHandleWidth(12)
+        splitter.setOpaqueResize(True)
+        splitter.setStyleSheet(
+            """
+            QSplitter::handle {
+                background: #b4b4b4;
+                border-left: 1px solid #878787;
+                border-right: 1px solid #dcdcdc;
+            }
+            QSplitter::handle:hover {
+                background: #6f9cd6;
+            }
+            """
+        )
 
         left_panel = QWidget()
+        left_panel.setMinimumWidth(0)
+        left_panel.setMinimumHeight(0)
+        left_panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         left_layout = QVBoxLayout(left_panel)
-        left_layout.setContentsMargins(0, 0, 6, 0)
-        left_layout.setSpacing(8)
+        left_layout.setContentsMargins(0, 0, 2, 0)
+        left_layout.setSpacing(4)
 
         self.define_table = QTableWidget(5, 2)
         self.define_table.setHorizontalHeaderLabels(["Parameter", "Value"])
         self.define_table.verticalHeader().setVisible(False)
         self.define_table.horizontalHeader().setVisible(False)
         self.define_table.setShowGrid(True)
-        self.define_table.setColumnWidth(0, 180)
-        self.define_table.horizontalHeader().setStretchLastSection(True)
-        self.define_table.verticalHeader().setDefaultSectionSize(28)
+        self.define_table.setMinimumWidth(0)
+        self.define_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.define_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.define_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self.define_table.verticalHeader().setDefaultSectionSize(22)
         self.define_table.setStyleSheet(
             """
             QTableWidget {
@@ -69,7 +94,7 @@ class BeamShapeWidget(QWidget):
                 border: 1px solid #b5b5b5;
             }
             QTableWidget::item {
-                padding: 3px;
+                padding: 2px;
             }
             """
         )
@@ -105,14 +130,16 @@ class BeamShapeWidget(QWidget):
         left_layout.addWidget(self.define_table)
 
         element_group = QGroupBox("Element Type")
+        element_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         element_layout = QVBoxLayout(element_group)
-        element_layout.setContentsMargins(8, 10, 8, 10)
+        element_layout.setContentsMargins(6, 8, 6, 8)
         element_layout.addWidget(QLabel("Point Source"), alignment=Qt.AlignmentFlag.AlignCenter)
         left_layout.addWidget(element_group)
 
         solution_group = QGroupBox("Solution")
+        solution_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         solution_layout = QHBoxLayout(solution_group)
-        solution_layout.setContentsMargins(8, 8, 8, 8)
+        solution_layout.setContentsMargins(6, 6, 6, 6)
         self.rb_oscillatory = QRadioButton("Oscillatory")
         self.rb_non_oscillatory = QRadioButton("Non-Oscillatory")
         self.rb_oscillatory.setChecked(True)
@@ -125,11 +152,13 @@ class BeamShapeWidget(QWidget):
         self.calc_btn = QPushButton("Calculate Phases")
         self.calc_btn.clicked.connect(self._on_calculate_clicked)
         self.calc_btn.setStyleSheet(self._button_stylesheet())
+        self.calc_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         left_layout.addWidget(self.calc_btn)
 
         decimal_group = QGroupBox("Decimal Places to Vertical Group Phi")
+        decimal_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         decimal_layout = QHBoxLayout(decimal_group)
-        decimal_layout.setContentsMargins(8, 8, 8, 8)
+        decimal_layout.setContentsMargins(6, 6, 6, 6)
         self.decimal_group = QButtonGroup(self)
         self.rb_dec0 = QRadioButton("0 (0)")
         self.rb_dec1 = QRadioButton("1 (0.0)")
@@ -146,16 +175,21 @@ class BeamShapeWidget(QWidget):
         self.transfer_btn = QPushButton("Transfer to Vertical Group Phi")
         self.transfer_btn.clicked.connect(self._on_transfer_clicked)
         self.transfer_btn.setStyleSheet(self._button_stylesheet())
+        self.transfer_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         left_layout.addWidget(self.transfer_btn)
 
         left_layout.addStretch(1)
 
         self.phase_table = QTableWidget(40, 2)
+        self.phase_table.setMinimumWidth(0)
+        self.phase_table.setMinimumHeight(0)
+        self.phase_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.phase_table.setHorizontalHeaderLabels(["Bay", "Phase"])
         self.phase_table.verticalHeader().setVisible(False)
-        self.phase_table.horizontalHeader().setStretchLastSection(True)
-        self.phase_table.setColumnWidth(0, 48)
-        self.phase_table.verticalHeader().setDefaultSectionSize(28)
+        self.phase_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        self.phase_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.phase_table.setColumnWidth(0, 42)
+        self.phase_table.verticalHeader().setDefaultSectionSize(22)
         self.phase_table.setStyleSheet(
             """
             QTableWidget {
@@ -166,7 +200,7 @@ class BeamShapeWidget(QWidget):
             QHeaderView::section {
                 background-color: white;
                 border: 1px solid #d0d0d0;
-                padding: 4px;
+                padding: 2px;
                 font-weight: bold;
             }
             """
@@ -182,9 +216,10 @@ class BeamShapeWidget(QWidget):
 
         splitter.addWidget(left_panel)
         splitter.addWidget(self.phase_table)
-        splitter.setSizes([340, 300])
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 2)
+        splitter.setSizes([260, 180])
+        splitter.setStretchFactor(0, 2)
+        splitter.setStretchFactor(1, 3)
+        enable_free_resize(splitter)
 
         main_layout.addWidget(splitter)
 
@@ -196,7 +231,7 @@ class BeamShapeWidget(QWidget):
             font-weight: bold;
             border: 1px solid #7cb8eb;
             border-radius: 3px;
-            padding: 7px 10px;
+            padding: 5px 8px;
         }
         QPushButton:hover {
             background-color: #3b99e4;
@@ -285,3 +320,9 @@ class BeamShapeWidget(QWidget):
         if self.current_result is None:
             return []
         return list(self.current_result.phases_deg)
+
+    def minimumSizeHint(self):
+        return QSize(0, 0)
+
+    def sizeHint(self):
+        return QSize(520, 320)

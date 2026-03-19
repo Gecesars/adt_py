@@ -34,7 +34,7 @@ DEGREE = "\N{DEGREE SIGN}"
 CONTROL_STYLESHEET = """
 QComboBox, QLineEdit, QAbstractSpinBox {
     background: white;
-    border: 1px solid #b8b8b8;
+    border: 1px solid #9d9d9d;
     padding: 1px 4px;
     min-height: 20px;
 }
@@ -101,7 +101,7 @@ class HrpPlotWidget(QWidget):
 
         self.db_combo = QComboBox()
         self.db_combo.setStyleSheet(CONTROL_STYLESHEET)
-        self.db_combo.setFixedWidth(116)
+        self.db_combo.setMinimumWidth(98)
         for label, _value in DB_OPTIONS:
             self.db_combo.addItem(label)
         self.db_combo.currentIndexChanged.connect(self.redraw_plot)
@@ -112,13 +112,13 @@ class HrpPlotWidget(QWidget):
         self.angle_spin.setDecimals(1)
         self.angle_spin.setSingleStep(0.1)
         self.angle_spin.setValue(0.0)
-        self.angle_spin.setFixedWidth(64)
+        self.angle_spin.setMinimumWidth(56)
         self.angle_spin.valueChanged.connect(self._emit_elevation_changed)
 
         self.dir_edit = QLineEdit("")
         self.dir_edit.setStyleSheet(CONTROL_STYLESHEET)
         self.dir_edit.setReadOnly(True)
-        self.dir_edit.setFixedWidth(62)
+        self.dir_edit.setMinimumWidth(54)
 
         tools_layout.addWidget(self.rb_e_emax)
         tools_layout.addWidget(self.rb_db)
@@ -173,9 +173,9 @@ class HrpPlotWidget(QWidget):
         return f"{db_value:.0f}"
 
     def _draw_polar_grid(self):
-        outer_pen = pg.mkPen(color="#000000", width=1.7)
-        major_pen = pg.mkPen(color="#000000", width=1.0)
-        minor_pen = pg.mkPen(color="#d8d8d8", width=0.7)
+        outer_pen = pg.mkPen(color="#000000", width=2.1)
+        major_pen = pg.mkPen(color="#000000", width=1.2)
+        minor_pen = pg.mkPen(color="#d0d0d0", width=0.85)
         radial_label_color = "#8b4a00" if self.rb_e_emax.isChecked() else "black"
         label_font = QFont("Segoe UI", 8)
 
@@ -220,7 +220,7 @@ class HrpPlotWidget(QWidget):
         x = np.sin(theta)
         y = np.cos(theta)
         line = QGraphicsLineItem(0.0, 0.0, x, y)
-        line.setPen(pg.mkPen(color="#d83a3a", width=1.8))
+        line.setPen(pg.mkPen(color="#d83a3a", width=2.3))
         self.plot_widget.addItem(line)
 
     def redraw_plot(self, *_args):
@@ -237,7 +237,7 @@ class HrpPlotWidget(QWidget):
         )
         x = radius * np.sin(theta)
         y = radius * np.cos(theta)
-        curve = pg.PlotCurveItem(x, y, pen=pg.mkPen("#2f55ff", width=1.5))
+        curve = pg.PlotCurveItem(x, y, pen=pg.mkPen("#2f55ff", width=2.2))
         self.plot_widget.addItem(curve)
         self._draw_selected_azimuth_line()
 
@@ -276,6 +276,9 @@ class VrpPlotWidget(QWidget):
         super().__init__()
         self.angles_deg = np.array([])
         self.magnitudes = np.array([])
+        self.selected_elevation_deg = 0.0
+        self.show_selected_elevation_line = True
+        self.normalise_vrp = False
         self._setting_azimuth_programmatically = False
         self._syncing_range_controls = False
         self.init_ui()
@@ -298,7 +301,7 @@ class VrpPlotWidget(QWidget):
 
         self.db_combo = QComboBox()
         self.db_combo.setStyleSheet(CONTROL_STYLESHEET)
-        self.db_combo.setFixedWidth(116)
+        self.db_combo.setMinimumWidth(98)
         for label, _value in DB_OPTIONS:
             self.db_combo.addItem(label)
         self.db_combo.currentIndexChanged.connect(self.redraw_plot)
@@ -307,18 +310,18 @@ class VrpPlotWidget(QWidget):
         self.azimuth_spin.setStyleSheet(CONTROL_STYLESHEET)
         self.azimuth_spin.setRange(0, 359)
         self.azimuth_spin.setValue(0)
-        self.azimuth_spin.setFixedWidth(64)
+        self.azimuth_spin.setMinimumWidth(56)
         self.azimuth_spin.valueChanged.connect(self._emit_azimuth_changed)
 
         self.dir_edit = QLineEdit("")
         self.dir_edit.setStyleSheet(CONTROL_STYLESHEET)
         self.dir_edit.setReadOnly(True)
-        self.dir_edit.setFixedWidth(62)
+        self.dir_edit.setMinimumWidth(54)
 
         self.tilt_edit = QLineEdit("")
         self.tilt_edit.setStyleSheet(CONTROL_STYLESHEET)
         self.tilt_edit.setReadOnly(True)
-        self.tilt_edit.setFixedWidth(62)
+        self.tilt_edit.setMinimumWidth(54)
 
         tools_layout.addWidget(self.rb_e_emax)
         tools_layout.addWidget(self.rb_db)
@@ -335,14 +338,14 @@ class VrpPlotWidget(QWidget):
         self.plot_widget.setBackground("w")
         self.plot_widget.setMenuEnabled(False)
         self.plot_widget.hideButtons()
-        self.plot_widget.showGrid(x=True, y=True, alpha=0.22)
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.32)
         self.plot_widget.setMouseEnabled(x=False, y=False)
         self.plot_widget.setLabel("bottom", "Angle of Depression (degrees)")
         self.plot_widget.setLabel("left", "")
 
         for axis_name in ("left", "bottom"):
             axis = self.plot_widget.getPlotItem().getAxis(axis_name)
-            axis.setPen(pg.mkPen("#000000", width=1.4))
+            axis.setPen(pg.mkPen("#000000", width=1.8))
             axis.setTextPen(pg.mkPen("#000000"))
             axis.setStyle(tickTextOffset=6)
 
@@ -354,14 +357,14 @@ class VrpPlotWidget(QWidget):
         self.start_spin.setStyleSheet(CONTROL_STYLESHEET)
         self.start_spin.setRange(-90, 89)
         self.start_spin.setValue(-5)
-        self.start_spin.setFixedWidth(62)
+        self.start_spin.setMinimumWidth(56)
         self.start_spin.valueChanged.connect(self._on_range_changed)
 
         self.stop_spin = NoWheelSpinBox()
         self.stop_spin.setStyleSheet(CONTROL_STYLESHEET)
         self.stop_spin.setRange(-89, 90)
         self.stop_spin.setValue(90)
-        self.stop_spin.setFixedWidth(62)
+        self.stop_spin.setMinimumWidth(56)
         self.stop_spin.valueChanged.connect(self._on_range_changed)
 
         range_layout.addWidget(QLabel("Start (deg):"))
@@ -444,9 +447,10 @@ class VrpPlotWidget(QWidget):
             return np.array([])
 
         values = np.asarray(self.magnitudes, dtype=float)
-        peak = float(np.max(values))
-        if peak > 0:
-            values = values / peak
+        if self.normalise_vrp:
+            peak = float(np.max(values))
+            if peak > 0:
+                values = values / peak
 
         if self.rb_e_emax.isChecked():
             return np.clip(values, 0.0, 1.0)
@@ -501,18 +505,37 @@ class VrpPlotWidget(QWidget):
 
         values = self._scaled_values()
         if values.size == 0:
+            self._draw_selected_elevation_line()
             return
 
         curve = pg.PlotCurveItem(
             np.asarray(self.angles_deg, dtype=float),
             values,
-            pen=pg.mkPen("#2f55ff", width=1.5),
+            pen=pg.mkPen("#2f55ff", width=2.2),
         )
         self.plot_widget.addItem(curve)
+        self._draw_selected_elevation_line()
+
+    def _draw_selected_elevation_line(self):
+        if not self.show_selected_elevation_line:
+            return
+        line = pg.InfiniteLine(
+            pos=float(self.selected_elevation_deg),
+            angle=90,
+            pen=pg.mkPen(color="#d83a3a", width=2.3),
+            movable=False,
+        )
+        self.plot_widget.addItem(line)
 
     def plot_data(self, angles_deg, magnitudes):
         self.angles_deg = np.asarray(angles_deg, dtype=float)
         self.magnitudes = np.asarray(magnitudes, dtype=float)
+        self.redraw_plot()
+
+    def set_selected_elevation(self, elevation_deg):
+        if elevation_deg is None:
+            elevation_deg = 0.0
+        self.selected_elevation_deg = float(elevation_deg)
         self.redraw_plot()
 
     def clear_plot_display(self):

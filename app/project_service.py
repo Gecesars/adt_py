@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 import math
 
 from domain import (
@@ -65,9 +66,15 @@ def compose_panel_excitation(
 
 def build_project_from_ui(
     design_info_widget,
-    antenna_design_widget,
-    pattern_library_widget,
+    site_details_widget=None,
+    antenna_design_widget=None,
+    pattern_library_widget=None,
 ) -> Project:
+    if pattern_library_widget is None:
+        pattern_library_widget = antenna_design_widget
+        antenna_design_widget = site_details_widget
+        site_details_widget = None
+
     metadata = DesignMetadata(
         customer=design_info_widget.customer_input.text().strip(),
         site_name=design_info_widget.site_name_input.text().strip(),
@@ -84,13 +91,35 @@ def build_project_from_ui(
         date_created=design_info_widget.date_created_input.text().strip(),
         design_note=design_info_widget.design_note_input.text().strip(),
     )
+    if site_details_widget is not None:
+        site_values = site_details_widget.get_site_values()
+        loss_values = site_details_widget.get_loss_values()
+    else:
+        site_values = {
+            "tower_type": "Square",
+            "tower_size_m": 0.64,
+            "tower_heading_deg": 0.0,
+            "feeder_type": "HCA38-50",
+            "feeder_length_m": 0.0,
+            "branch_feeder_length_m": 0.0,
+            "transmitter_power_kw": 0.0,
+            "antenna_height_m": 150.0,
+        }
+        loss_values = {
+            "internal_db": _safe_float(design_info_widget.internal_loss_input.text(), 0.5),
+            "polarization_db": _safe_float(design_info_widget.pol_loss_input.text(), 3.0),
+            "filter_combiner_db": _safe_float(
+                design_info_widget.filter_loss_input.text(),
+                0.8,
+            ),
+            "feeder_db": _safe_float(design_info_widget.feeder_loss_input.text(), 1.2),
+        }
+
     losses = LossProfile(
-        internal_db=_safe_float(design_info_widget.internal_loss_input.text(), 0.5),
-        polarization_db=_safe_float(design_info_widget.pol_loss_input.text(), 3.0),
-        filter_combiner_db=_safe_float(
-            design_info_widget.filter_loss_input.text(), 0.8
-        ),
-        feeder_db=_safe_float(design_info_widget.feeder_loss_input.text(), 1.2),
+        internal_db=_safe_float(loss_values.get("internal_db"), 0.1),
+        polarization_db=_safe_float(loss_values.get("polarization_db"), 0.0),
+        filter_combiner_db=_safe_float(loss_values.get("filter_combiner_db"), 0.0),
+        feeder_db=_safe_float(loss_values.get("feeder_db"), 0.0),
     )
 
     pattern_configs = pattern_library_widget.get_pattern_configs()
@@ -147,7 +176,22 @@ def build_project_from_ui(
     return Project(
         schema_version=1,
         metadata=metadata,
-        site=SiteConfig(),
+        site=SiteConfig(
+            tower_type=str(site_values.get("tower_type") or "Square"),
+            tower_size_m=_safe_float(site_values.get("tower_size_m"), 0.64),
+            tower_heading_deg=_safe_float(site_values.get("tower_heading_deg"), 0.0),
+            feeder_type=str(site_values.get("feeder_type") or "HCA38-50"),
+            feeder_length_m=_safe_float(site_values.get("feeder_length_m"), 0.0),
+            branch_feeder_length_m=_safe_float(
+                site_values.get("branch_feeder_length_m"),
+                0.0,
+            ),
+            transmitter_power_kw=_safe_float(
+                site_values.get("transmitter_power_kw"),
+                1.0,
+            ),
+            antenna_height_m=_safe_float(site_values.get("antenna_height_m"), 150.0),
+        ),
         losses=losses,
         patterns=patterns,
         panels=panels,
@@ -159,9 +203,15 @@ def build_project_from_ui(
 def apply_project_to_ui(
     project: Project,
     design_info_widget,
-    antenna_design_widget,
-    pattern_library_widget,
+    site_details_widget=None,
+    antenna_design_widget=None,
+    pattern_library_widget=None,
 ):
+    if pattern_library_widget is None:
+        pattern_library_widget = antenna_design_widget
+        antenna_design_widget = site_details_widget
+        site_details_widget = None
+
     metadata = project.metadata
     losses = project.losses
 
@@ -180,10 +230,18 @@ def apply_project_to_ui(
     design_info_widget.designer_name_input.setText(metadata.designer_name)
     design_info_widget.date_created_input.setText(metadata.date_created)
     design_info_widget.design_note_input.setText(metadata.design_note)
+    if site_details_widget is not None:
+        site_details_widget.apply_values(asdict(project.site), asdict(losses))
     design_info_widget.internal_loss_input.setText(f"{losses.internal_db:g}")
     design_info_widget.pol_loss_input.setText(f"{losses.polarization_db:g}")
     design_info_widget.filter_loss_input.setText(f"{losses.filter_combiner_db:g}")
-    design_info_widget.feeder_loss_input.setText(f"{losses.feeder_db:g}")
+    design_info_widget.feeder_loss_input.setText(
+        (
+            f"{site_details_widget.computed_feeder_loss_db:g}"
+            if site_details_widget is not None
+            else f"{losses.feeder_db:g}"
+        )
+    )
 
     pattern_library_widget.set_pattern_configs(
         {

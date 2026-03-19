@@ -5,12 +5,14 @@ from PyQt6.QtWidgets import (
     QGroupBox,
     QHeaderView,
     QLabel,
+    QSizePolicy,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
+from widgets.splitter_utils import enable_free_resize
 
 
 def _format_angle(value):
@@ -37,29 +39,42 @@ class AntennaDesignWidget(QWidget):
         super().__init__()
         self.face_labels = [chr(ord("A") + index) for index in range(26)]
         self.vertical_group_count = 100
+        self.setMinimumWidth(0)
+        self.setMinimumHeight(0)
         self.init_ui()
 
     def init_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(5, 5, 5, 5)
+        main_layout.setContentsMargins(4, 4, 4, 4)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setHandleWidth(8)
+        self.main_splitter = splitter
 
         left_widget = QWidget()
+        left_widget.setMinimumWidth(0)
+        left_widget.setMinimumHeight(0)
+        left_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         left_layout = QVBoxLayout(left_widget)
-        left_layout.setContentsMargins(0, 0, 5, 0)
+        left_layout.setContentsMargins(0, 0, 4, 0)
+        left_layout.setSpacing(4)
+
+        left_splitter = QSplitter(Qt.Orientation.Vertical)
+        left_splitter.setHandleWidth(8)
+        self.left_splitter = left_splitter
 
         table_style = """
-            QTableWidget { font-size: 11px; }
+            QTableWidget { font-size: 9pt; }
             QHeaderView::section {
                 background-color: #f0f0f0;
                 padding: 2px;
                 border: 1px solid #c0c0c0;
-                font-size: 11px;
+                font-size: 9pt;
             }
         """
 
         h_group_box = QGroupBox("Horizontal Group Phi & Power")
+        h_group_box.setMinimumHeight(0)
         h_group_layout = QVBoxLayout(h_group_box)
         h_group_layout.setContentsMargins(0, 5, 0, 0)
 
@@ -67,10 +82,10 @@ class AntennaDesignWidget(QWidget):
         self.h_group_table.setHorizontalHeaderLabels(self.face_labels)
         self.h_group_table.setVerticalHeaderLabels(["Phi", "Pwr"])
         self.h_group_table.setStyleSheet(table_style)
-        self.h_group_table.verticalHeader().setDefaultSectionSize(22)
-        self.h_group_table.horizontalHeader().setDefaultSectionSize(48)
+        self.h_group_table.verticalHeader().setDefaultSectionSize(20)
+        self.h_group_table.horizontalHeader().setDefaultSectionSize(42)
         self.h_group_table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Fixed
+            QHeaderView.ResizeMode.Interactive
         )
 
         for col in range(len(self.face_labels)):
@@ -78,9 +93,10 @@ class AntennaDesignWidget(QWidget):
             self.h_group_table.setItem(1, col, QTableWidgetItem("1.000"))
 
         h_group_layout.addWidget(self.h_group_table)
-        left_layout.addWidget(h_group_box, stretch=0)
+        left_splitter.addWidget(h_group_box)
 
         array_box = QGroupBox("Array Data")
+        array_box.setMinimumHeight(0)
         array_layout = QVBoxLayout(array_box)
         array_layout.setContentsMargins(0, 5, 0, 0)
 
@@ -103,19 +119,29 @@ class AntennaDesignWidget(QWidget):
         self.array_table.setHorizontalHeaderLabels(headers)
         self.array_table.verticalHeader().setVisible(False)
         self.array_table.setStyleSheet(table_style)
-        self.array_table.verticalHeader().setDefaultSectionSize(22)
+        self.array_table.verticalHeader().setDefaultSectionSize(20)
+        self.array_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.array_table.horizontalHeader().setStretchLastSection(False)
 
         for row in range(self.array_table.rowCount()):
             self._initialize_array_row(row)
 
         array_layout.addWidget(self.array_table)
-        left_layout.addWidget(array_box, stretch=1)
+        left_splitter.addWidget(array_box)
+        left_splitter.setSizes([120, 420])
+        enable_free_resize(left_splitter)
+        left_layout.addWidget(left_splitter, 1)
 
         right_widget = QWidget()
+        right_widget.setMinimumWidth(0)
+        right_widget.setMinimumHeight(0)
+        right_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         right_layout = QVBoxLayout(right_widget)
         right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(4)
 
         v_group_box = QGroupBox("Vertical Group Phi")
+        v_group_box.setMinimumHeight(0)
         v_group_layout = QVBoxLayout(v_group_box)
         v_group_layout.setContentsMargins(0, 5, 0, 0)
 
@@ -125,10 +151,11 @@ class AntennaDesignWidget(QWidget):
         )
         self.v_group_table.setHorizontalHeaderLabels(["Phi"])
         self.v_group_table.setStyleSheet(table_style)
-        self.v_group_table.verticalHeader().setDefaultSectionSize(22)
+        self.v_group_table.verticalHeader().setDefaultSectionSize(20)
         self.v_group_table.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.Stretch
+            0, QHeaderView.ResizeMode.Interactive
         )
+        self.v_group_table.setColumnWidth(0, 76)
 
         for row in range(self.v_group_table.rowCount()):
             self.v_group_table.setItem(row, 0, QTableWidgetItem("0.0"))
@@ -138,10 +165,10 @@ class AntennaDesignWidget(QWidget):
 
         splitter.addWidget(left_widget)
         splitter.addWidget(right_widget)
-        splitter.setSizes([920, 160])
-        splitter.setChildrenCollapsible(False)
+        splitter.setSizes([940, 140])
         splitter.setStretchFactor(0, 9)
         splitter.setStretchFactor(1, 3)
+        enable_free_resize(splitter)
 
         main_layout.addWidget(splitter)
 

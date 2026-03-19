@@ -28,6 +28,7 @@ class DesignMetadata:
 @dataclass
 class SiteConfig:
     tower_type: str = ""
+    tower_size_m: float = 0.0
     tower_heading_deg: float = 0.0
     feeder_type: str = ""
     feeder_length_m: float = 0.0
@@ -135,4 +136,3 @@ class Project:
             horizontal_groups=horizontal_groups,
             vertical_groups=vertical_groups,
         )
-

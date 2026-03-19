@@ -7,4 +7,5 @@ from .pattern_library import PatternLibraryWidget
 from .radiation_plots import HrpPlotWidget, VrpPlotWidget
 from .result_summary import ResultSummaryWidget
 from .save_patterns import SavePatternsWidget
+from .site_details import SiteDetailsWidget
 from .tower_layout import TowerLayoutWidget

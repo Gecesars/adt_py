@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from widgets.splitter_utils import enable_free_resize
 
 
 BUTTON_STYLESHEET = """
@@ -124,7 +125,7 @@ class TowerPreviewWidget(QWidget):
         self.view_elevation_deg = 0.0
         self.zoom_percent = 100.0
         self.export_wireframe_mode = False
-        self.setMinimumHeight(360)
+        self.setMinimumHeight(0)
         self.setAutoFillBackground(True)
         self.setObjectName("towerPreviewWidget")
 
@@ -566,6 +567,8 @@ class TowerLayoutWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.preview_panels = []
+        self.setMinimumWidth(0)
+        self.setMinimumHeight(0)
         self.init_ui()
 
     def init_ui(self):
@@ -607,12 +610,19 @@ class TowerLayoutWidget(QWidget):
         )
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setChildrenCollapsible(False)
+        splitter.setHandleWidth(8)
+        self.main_splitter = splitter
 
         left_widget = QWidget()
+        left_widget.setMinimumWidth(0)
+        left_widget.setMinimumHeight(0)
         left_layout = QVBoxLayout(left_widget)
         left_layout.setContentsMargins(0, 0, 4, 0)
-        left_layout.setSpacing(8)
+        left_layout.setSpacing(4)
+
+        left_splitter = QSplitter(Qt.Orientation.Vertical)
+        left_splitter.setHandleWidth(8)
+        self.left_splitter = left_splitter
 
         rotation_group = QGroupBox()
         rotation_layout = QVBoxLayout(rotation_group)
@@ -646,7 +656,7 @@ class TowerLayoutWidget(QWidget):
         rotation_buttons.addWidget(self.rotation_reset_btn)
         rotation_buttons.addWidget(self.rotation_apply_btn)
         rotation_layout.addLayout(rotation_buttons)
-        left_layout.addWidget(rotation_group)
+        left_splitter.addWidget(rotation_group)
 
         tilt_group = QGroupBox("Mechanical Tilt")
         tilt_layout = QVBoxLayout(tilt_group)
@@ -690,7 +700,7 @@ class TowerLayoutWidget(QWidget):
         tilt_buttons.addWidget(self.tilt_reset_btn)
         tilt_buttons.addWidget(self.tilt_apply_btn)
         tilt_layout.addLayout(tilt_buttons)
-        left_layout.addWidget(tilt_group)
+        left_splitter.addWidget(tilt_group)
 
         geometry_group = QGroupBox()
         geometry_layout = QVBoxLayout(geometry_group)
@@ -761,13 +771,14 @@ class TowerLayoutWidget(QWidget):
         self.generate_btn.setStyleSheet(BUTTON_STYLESHEET)
         self.generate_btn.clicked.connect(self._emit_generate_geometry)
         geometry_layout.addWidget(self.generate_btn)
-        left_layout.addWidget(geometry_group)
-        left_layout.addStretch(1)
+        left_splitter.addWidget(geometry_group)
+        left_splitter.setSizes([110, 150, 260])
+        left_layout.addWidget(left_splitter, 1)
 
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
         right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(6)
+        right_layout.setSpacing(4)
 
         top_toolbar = QHBoxLayout()
         top_toolbar.setContentsMargins(0, 0, 0, 0)
@@ -790,14 +801,14 @@ class TowerLayoutWidget(QWidget):
         self.view_combo.setStyleSheet(TABLE_STYLESHEET)
         self.view_combo.addItems(list(TowerPreviewWidget.VIEW_PRESETS.keys()))
         self.view_combo.setCurrentText("Side View (Back)")
-        self.view_combo.setFixedWidth(190)
+        self.view_combo.setMinimumWidth(170)
         self.view_combo.currentTextChanged.connect(self._update_preview_view)
         top_toolbar.addWidget(self.view_combo)
 
         self.secondary_view_combo = QComboBox()
         self.secondary_view_combo.setStyleSheet(TABLE_STYLESHEET)
         self.secondary_view_combo.addItems(["Top View", "Bottom View"])
-        self.secondary_view_combo.setFixedWidth(120)
+        self.secondary_view_combo.setMinimumWidth(108)
         self.secondary_view_combo.currentTextChanged.connect(
             self._sync_secondary_view_preset
         )
@@ -832,7 +843,8 @@ class TowerLayoutWidget(QWidget):
             self.view_elevation_spin,
             self.view_zoom_spin,
         ):
-            spin_box.setFixedWidth(60)
+            spin_box.setMinimumWidth(56)
+            spin_box.setMaximumWidth(72)
 
         view_controls_layout.addWidget(QLabel("Rotation"), 0, 0)
         view_controls_layout.addWidget(self.view_rotation_spin, 0, 1)
@@ -845,11 +857,11 @@ class TowerLayoutWidget(QWidget):
         self.reset_view_btn.setStyleSheet(BUTTON_STYLESHEET)
         self.reset_view_btn.clicked.connect(self.reset_view)
         view_controls_layout.addWidget(self.reset_view_btn, 3, 0, 1, 2)
-        self.reset_view_btn.setFixedWidth(98)
+        self.reset_view_btn.setMinimumWidth(92)
 
         view_panel = QWidget()
         view_panel.setObjectName("viewControlPanel")
-        view_panel.setFixedWidth(118)
+        view_panel.setMinimumWidth(0)
         view_panel_layout = QVBoxLayout(view_panel)
         view_panel_layout.setContentsMargins(0, 6, 0, 0)
         view_panel_layout.setSpacing(6)
@@ -865,19 +877,25 @@ class TowerLayoutWidget(QWidget):
         self.preview_widget = TowerPreviewWidget()
         preview_host_layout.addWidget(self.preview_widget)
 
-        preview_body_layout = QHBoxLayout()
-        preview_body_layout.setContentsMargins(0, 0, 0, 0)
-        preview_body_layout.setSpacing(8)
-        preview_body_layout.addWidget(view_panel, 0, Qt.AlignmentFlag.AlignTop)
-        preview_body_layout.addWidget(preview_host, 1)
+        preview_splitter = QSplitter(Qt.Orientation.Horizontal)
+        preview_splitter.setHandleWidth(8)
+        self.preview_splitter = preview_splitter
+        preview_splitter.addWidget(view_panel)
+        preview_splitter.addWidget(preview_host)
+        preview_splitter.setSizes([120, 640])
+        preview_splitter.setStretchFactor(0, 0)
+        preview_splitter.setStretchFactor(1, 1)
+        enable_free_resize(preview_splitter)
 
-        right_layout.addLayout(preview_body_layout, 1)
+        right_layout.addWidget(preview_splitter, 1)
 
         splitter.addWidget(left_widget)
         splitter.addWidget(right_widget)
         splitter.setSizes([410, 690])
         splitter.setStretchFactor(0, 4)
         splitter.setStretchFactor(1, 7)
+        enable_free_resize(left_splitter)
+        enable_free_resize(splitter)
 
         layout.addWidget(splitter)
 

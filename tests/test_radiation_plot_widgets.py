@@ -83,6 +83,20 @@ class RadiationPlotWidgetTests(unittest.TestCase):
         self.assertEqual(widget.dir_edit.text(), "")
         self.assertEqual(widget.tilt_edit.text(), "")
 
+    def test_vrp_plot_widget_preserves_absolute_cut_level_by_default(self):
+        widget = VrpPlotWidget()
+        angles = np.linspace(-90.0, 90.0, 181)
+        magnitudes = np.full(angles.shape, 0.5)
+
+        widget.plot_data(angles, magnitudes)
+
+        values = widget._scaled_values()
+        self.assertAlmostEqual(float(np.max(values)), 0.5, places=12)
+
+        widget.normalise_vrp = True
+        values_normalised = widget._scaled_values()
+        self.assertAlmostEqual(float(np.max(values_normalised)), 1.0, places=12)
+
 
 if __name__ == "__main__":
     unittest.main()

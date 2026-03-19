@@ -3,6 +3,7 @@ import numpy as np
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QTableWidget, QTableWidgetItem, QComboBox, QHeaderView, QMessageBox, QSplitter)
 from PyQt6.QtCore import Qt
+from widgets.splitter_utils import enable_free_resize
 
 class FieldStrengthExposureDialog(QDialog):
     def __init__(self, parent=None, frequency=539.0, tx_power=10.0, erp=10.0, mag_3d=None, az_angles=None, el_angles=None):
@@ -107,6 +108,7 @@ class FieldStrengthExposureDialog(QDialog):
         self.grid_table.setCellWidget(1, 6, combo2)
         
         splitter.addWidget(self.grid_table)
+        enable_free_resize(splitter)
         main_layout.addWidget(splitter)
         
         # --- Calculate Button ---

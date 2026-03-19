@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, 
                              QHeaderView, QSplitter, QLabel, QHBoxLayout, QPushButton, QGroupBox)
 from PyQt6.QtCore import Qt
+from widgets.splitter_utils import enable_free_resize
 
 class CompensationWidget(QWidget):
     def __init__(self):
@@ -72,6 +73,7 @@ class CompensationWidget(QWidget):
         splitter.addWidget(left_widget)
         splitter.addWidget(right_widget)
         splitter.setSizes([500, 300])
-        
+        enable_free_resize(splitter)
+
         layout.addWidget(splitter)
         self.setLayout(layout)

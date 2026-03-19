@@ -7,11 +7,15 @@ class MessageListWidget(QWidget):
         
     def init_ui(self):
         layout = QVBoxLayout()
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
         
         self.table = QTableWidget(0, 2)
         self.table.setHorizontalHeaderLabels(["Time", "Description"])
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.table.verticalHeader().setVisible(False)
+        self.table.verticalHeader().setDefaultSectionSize(22)
         
         layout.addWidget(self.table)
         self.setLayout(layout)

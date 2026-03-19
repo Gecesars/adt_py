@@ -41,6 +41,13 @@ class BeamShapeWidgetTests(unittest.TestCase):
 
         self.assertEqual(widget.define_table.item(0, 1).text(), "601.25")
 
+    def test_splitter_is_fully_collapsible(self):
+        widget = BeamShapeWidget()
+
+        self.assertTrue(widget.main_splitter.childrenCollapsible())
+        self.assertEqual(widget.minimumSizeHint().width(), 0)
+        self.assertEqual(widget.minimumSizeHint().height(), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
