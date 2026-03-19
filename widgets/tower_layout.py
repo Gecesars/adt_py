@@ -123,6 +123,7 @@ class TowerPreviewWidget(QWidget):
         self.view_rotation_deg = 0.0
         self.view_elevation_deg = 0.0
         self.zoom_percent = 100.0
+        self.export_wireframe_mode = False
         self.setMinimumHeight(360)
         self.setAutoFillBackground(True)
         self.setObjectName("towerPreviewWidget")
@@ -528,17 +529,28 @@ class TowerPreviewWidget(QWidget):
         panel_fill = QColor("#d9fbfc")
         panel_fill.setAlpha(180)
 
-        self._draw_solid_box(painter, self._tower_corners(), scale, center, tower_pen, tower_fill)
+        if self.export_wireframe_mode:
+            self._draw_box(painter, self._tower_corners(), scale, center, tower_pen)
+            for panel in self.panels:
+                self._draw_box(
+                    painter,
+                    self._panel_corners(panel),
+                    scale,
+                    center,
+                    panel_pen,
+                )
+        else:
+            self._draw_solid_box(painter, self._tower_corners(), scale, center, tower_pen, tower_fill)
 
-        for panel in self.panels:
-            self._draw_solid_box(
-                painter,
-                self._panel_corners(panel),
-                scale,
-                center,
-                panel_pen,
-                panel_fill,
-            )
+            for panel in self.panels:
+                self._draw_solid_box(
+                    painter,
+                    self._panel_corners(panel),
+                    scale,
+                    center,
+                    panel_pen,
+                    panel_fill,
+                )
 
         self._draw_axes(painter)
         self._draw_viewport_frame(painter)

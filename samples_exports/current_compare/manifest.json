@@ -1,0 +1,133 @@
+{
+  "case_name": "default_case_4face_4level",
+  "generated_from": "scripts/generate_sample_exports.py",
+  "export_count": 24,
+  "geometry": {
+    "faces_per_level": 4,
+    "panel_offset_m": 0.34,
+    "first_panel_heading_deg": 0.0,
+    "levels": 4,
+    "vertical_spacing_m": 1.15,
+    "alternate_levels_cogged": false
+  },
+  "project_metadata": {
+    "customer": "",
+    "site_name": "",
+    "antenna_model": "",
+    "design_frequency_mhz": 539.0,
+    "channel_frequency_mhz": 539.0,
+    "polarization": "Horizontal"
+  },
+  "metrics": {
+    "Channel Frequency (MHz)": "539.00",
+    "3D Directivity (dBd)": "11.34",
+    "Azimuth Angle (Emax) (deg)": "-46.0",
+    "Elevation Angle (Emax) (deg)": "0.0",
+    "Internal Loss (dB)": "0.50",
+    "Polarisation Loss (dB)": "3.00",
+    "Filter/Combiner Loss (dB)": "0.80",
+    "Main Feeder Loss (dB)": "1.20",
+    "System Gain (dBd)": "5.84",
+    "Transmitter Power (kW)": "16.00",
+    "ERP (dBW)": "47.88",
+    "ERP (kW)": "61.43"
+  },
+  "files": [
+    {
+      "format": "HRP PAT",
+      "filename": "hrp.pat"
+    },
+    {
+      "format": "VRP PAT",
+      "filename": "vrp.pat"
+    },
+    {
+      "format": "HRP Text",
+      "filename": "hrp.txt"
+    },
+    {
+      "format": "VRP Text",
+      "filename": "vrp.txt"
+    },
+    {
+      "format": "HRP CSV",
+      "filename": "hrp.csv"
+    },
+    {
+      "format": "VRP CSV",
+      "filename": "vrp.csv"
+    },
+    {
+      "format": "HRP V-Soft",
+      "filename": "hrp.vep"
+    },
+    {
+      "format": "VRP V-Soft",
+      "filename": "vrp.vep"
+    },
+    {
+      "format": "HRP ATDI",
+      "filename": "hrp.H_DIA.DIA"
+    },
+    {
+      "format": "VRP ATDI",
+      "filename": "vrp.V_DIA.DIA"
+    },
+    {
+      "format": "3D ATDI",
+      "filename": "pattern3d.csv"
+    },
+    {
+      "format": "3D Text",
+      "filename": "pattern.3dp"
+    },
+    {
+      "format": "NGW3D",
+      "filename": "pattern.ng3dant"
+    },
+    {
+      "format": "PRN",
+      "filename": "pattern.prn"
+    },
+    {
+      "format": "EDX",
+      "filename": "pattern.ProgiraEDX.pat"
+    },
+    {
+      "format": "Complex EDX",
+      "filename": "pattern_complex.ProgiraEDX.pat"
+    },
+    {
+      "format": "Directivity",
+      "filename": "pattern.dir"
+    },
+    {
+      "format": "HRP JPEG",
+      "filename": "hrp.jpg"
+    },
+    {
+      "format": "VRP JPEG",
+      "filename": "vrp.jpg"
+    },
+    {
+      "format": "Layout JPEG",
+      "filename": "layout.jpg"
+    },
+    {
+      "format": "Summary PDF",
+      "filename": "summary.pdf"
+    },
+    {
+      "format": "Panel PDF",
+      "filename": "panels.pdf"
+    },
+    {
+      "format": "All PDF",
+      "filename": "all.pdf"
+    },
+    {
+      "format": "Video",
+      "filename": "vrp_animation.avi"
+    }
+  ]
+}

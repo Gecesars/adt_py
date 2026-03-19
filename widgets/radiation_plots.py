@@ -79,6 +79,7 @@ class HrpPlotWidget(QWidget):
         self.angles_deg = np.array([])
         self.magnitudes = np.array([])
         self.selected_azimuth_deg = 0.0
+        self.show_selected_azimuth_line = True
         self._setting_angle_programmatically = False
         self.init_ui()
         self.redraw_plot()
@@ -213,6 +214,8 @@ class HrpPlotWidget(QWidget):
                 self.plot_widget.addItem(text)
 
     def _draw_selected_azimuth_line(self):
+        if not self.show_selected_azimuth_line:
+            return
         theta = np.deg2rad(float(self.selected_azimuth_deg) % 360.0)
         x = np.sin(theta)
         y = np.cos(theta)

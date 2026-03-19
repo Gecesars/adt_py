@@ -1,9 +1,12 @@
 import sys
+from datetime import datetime
+from pathlib import Path
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QTabWidget, QDockWidget, QMenuBar, QMenu, QStatusBar,
                              QHBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem,
-                             QHeaderView, QPushButton, QLabel, QSplitter)
-from PyQt6.QtCore import Qt, QLocale
+                             QHeaderView, QPushButton, QLabel, QSplitter,
+                             QFileDialog, QMessageBox)
+from PyQt6.QtCore import Qt, QLocale, QTimer
 
 from catalogs import OriginalAdtCatalog
 from solver.pattern_synthesis import (
@@ -26,6 +29,7 @@ from widgets.radiation_plots import (
     display_to_internal_azimuth,
 )
 from widgets.result_summary import ResultSummaryWidget
+from widgets.save_patterns import SavePatternsSettings, SavePatternsWidget
 from widgets.message_list import MessageListWidget
 from widgets.beam_shape import BeamShapeWidget
 
@@ -68,6 +72,7 @@ class ADTMainWindow(QMainWindow):
         self.refresh_beam_shape_frequency()
         self._sync_design_panel_count_from_array()
         self.refresh_tower_layout_preview()
+        QTimer.singleShot(0, self._apply_legacy_window_proportions)
         
     def init_menu(self):
         menubar = self.menuBar()
@@ -88,11 +93,37 @@ class ADTMainWindow(QMainWindow):
         act_save_proj = QAction("Save Project.ant", self)
         act_save_proj_as = QAction("Save Project.ant As", self)
         
-        act_save_rfs_pat = QAction("Save Displayed Pattern as RFS PAT Format", self)
-        act_save_txt = QAction("Save Displayed Pattern as Text Format", self)
-        act_save_csv = QAction("Save Displayed Pattern as CSV Format", self)
-        act_save_vsoft = QAction("Save Displayed Pattern as V-Soft Format", self)
-        act_save_atdi = QAction("Save Pattern as ATDI Format", self)
+        save_pat_menu = file_menu.addMenu("Save Displayed Pattern as EFTX PAT Format")
+        act_save_hrp_pat = QAction("HRP", self)
+        act_save_vrp_pat = QAction("VRP", self)
+        save_pat_menu.addAction(act_save_hrp_pat)
+        save_pat_menu.addAction(act_save_vrp_pat)
+
+        save_txt_menu = file_menu.addMenu("Save Displayed Pattern as Text Format")
+        act_save_hrp_txt = QAction("HRP", self)
+        act_save_vrp_txt = QAction("VRP", self)
+        save_txt_menu.addAction(act_save_hrp_txt)
+        save_txt_menu.addAction(act_save_vrp_txt)
+
+        save_csv_menu = file_menu.addMenu("Save Displayed Pattern as CSV Format")
+        act_save_hrp_csv = QAction("HRP", self)
+        act_save_vrp_csv = QAction("VRP", self)
+        save_csv_menu.addAction(act_save_hrp_csv)
+        save_csv_menu.addAction(act_save_vrp_csv)
+
+        save_vsoft_menu = file_menu.addMenu("Save Displayed Pattern as V-Soft Format")
+        act_save_hrp_vsoft = QAction("HRP", self)
+        act_save_vrp_vsoft = QAction("VRP", self)
+        save_vsoft_menu.addAction(act_save_hrp_vsoft)
+        save_vsoft_menu.addAction(act_save_vrp_vsoft)
+
+        save_atdi_menu = file_menu.addMenu("Save Pattern as ATDI Format")
+        act_save_hrp_atdi = QAction("HRP", self)
+        act_save_vrp_atdi = QAction("VRP", self)
+        act_save_3d_atdi = QAction("3D", self)
+        save_atdi_menu.addAction(act_save_hrp_atdi)
+        save_atdi_menu.addAction(act_save_vrp_atdi)
+        save_atdi_menu.addAction(act_save_3d_atdi)
         act_save_3d_txt = QAction("Save 3D Pattern as Text Format (1° Az, 0.1° El)", self)
         act_save_3d_ngw = QAction("Save 3D Pattern as NGW3D Format (1° Az, 0.1° El)", self)
         act_save_3d_prn = QAction("Save 3D Pattern as PRN Format (1° Az, 1° El)", self)
@@ -106,11 +137,6 @@ class ADTMainWindow(QMainWindow):
         file_menu.addAction(act_save_proj)
         file_menu.addAction(act_save_proj_as)
         file_menu.addSeparator()
-        file_menu.addAction(act_save_rfs_pat)
-        file_menu.addAction(act_save_txt)
-        file_menu.addAction(act_save_csv)
-        file_menu.addAction(act_save_vsoft)
-        file_menu.addAction(act_save_atdi)
         file_menu.addAction(act_save_3d_txt)
         file_menu.addAction(act_save_3d_ngw)
         file_menu.addAction(act_save_3d_prn)
@@ -167,6 +193,8 @@ class ADTMainWindow(QMainWindow):
         act_plot_save_hrp_jpg = QAction("Save Displayed HRP to File (jpg)", self)
         act_plot_save_vrp_jpg = QAction("Save Displayed VRP to File (jpg)", self)
         act_plot_save_layout_jpg = QAction("Save Layout to File (jpg)", self)
+        act_plot_save_hrp_pdf = QAction("Save Displayed HRP to File (pdf)", self)
+        act_plot_save_vrp_pdf = QAction("Save Displayed VRP to File (pdf)", self)
         act_plot_save_summary_pdf = QAction("Save Result Summary to File (pdf)", self)
         act_plot_save_panel_pdf = QAction("Save Panel Positions and Electrical Data to File (pdf)", self)
         act_plot_save_all_pdf = QAction("Save All to File (pdf)", self)
@@ -174,6 +202,8 @@ class ADTMainWindow(QMainWindow):
         plot_save_pattern_menu = plot_menu.addMenu("Save Displayed Pattern to File (jpg)")
         plot_save_pattern_menu.addAction(act_plot_save_hrp_jpg)
         plot_save_pattern_menu.addAction(act_plot_save_vrp_jpg)
+        plot_menu.addAction(act_plot_save_hrp_pdf)
+        plot_menu.addAction(act_plot_save_vrp_pdf)
         plot_menu.addSeparator()
         plot_menu.addAction(act_plot_save_layout_jpg)
         plot_menu.addAction(act_plot_save_summary_pdf)
@@ -259,25 +289,33 @@ class ADTMainWindow(QMainWindow):
         act_save_proj.triggered.connect(self.on_file_save)
         act_save_proj_as.triggered.connect(self.on_file_save)
         
-        act_save_rfs_pat.triggered.connect(lambda: self.on_export_file("RFS PAT", "pat"))
-        act_save_txt.triggered.connect(lambda: self.on_export_file("Text", "txt"))
-        act_save_csv.triggered.connect(lambda: self.on_export_file("CSV", "csv"))
-        act_save_vsoft.triggered.connect(lambda: self.on_export_file("V-Soft", "pat"))
-        act_save_atdi.triggered.connect(lambda: self.on_export_file("ATDI", "txt"))
-        act_save_3d_txt.triggered.connect(lambda: self.on_export_file("3D Text", "txt"))
-        act_save_3d_ngw.triggered.connect(lambda: self.on_export_file("NGW3D", "txt"))
-        act_save_3d_prn.triggered.connect(lambda: self.on_export_file("PRN", "prn"))
-        act_save_edx.triggered.connect(lambda: self.on_export_file("EDX", "pat"))
-        act_save_complex_edx.triggered.connect(lambda: self.on_export_file("Complex EDX", "pat"))
-        act_save_directivity.triggered.connect(lambda: self.on_export_file("Directivity", "txt"))
-        act_save_anim_video.triggered.connect(lambda: self.on_export_file("Video", "avi"))
+        act_save_hrp_pat.triggered.connect(lambda: self.on_export_file("HRP PAT"))
+        act_save_vrp_pat.triggered.connect(lambda: self.on_export_file("VRP PAT"))
+        act_save_hrp_txt.triggered.connect(lambda: self.on_export_file("HRP Text"))
+        act_save_vrp_txt.triggered.connect(lambda: self.on_export_file("VRP Text"))
+        act_save_hrp_csv.triggered.connect(lambda: self.on_export_file("HRP CSV"))
+        act_save_vrp_csv.triggered.connect(lambda: self.on_export_file("VRP CSV"))
+        act_save_hrp_vsoft.triggered.connect(lambda: self.on_export_file("HRP V-Soft"))
+        act_save_vrp_vsoft.triggered.connect(lambda: self.on_export_file("VRP V-Soft"))
+        act_save_hrp_atdi.triggered.connect(lambda: self.on_export_file("HRP ATDI"))
+        act_save_vrp_atdi.triggered.connect(lambda: self.on_export_file("VRP ATDI"))
+        act_save_3d_atdi.triggered.connect(lambda: self.on_export_file("3D ATDI"))
+        act_save_3d_txt.triggered.connect(lambda: self.on_export_file("3D Text"))
+        act_save_3d_ngw.triggered.connect(lambda: self.on_export_file("NGW3D"))
+        act_save_3d_prn.triggered.connect(lambda: self.on_export_file("PRN"))
+        act_save_edx.triggered.connect(lambda: self.on_export_file("EDX"))
+        act_save_complex_edx.triggered.connect(lambda: self.on_export_file("Complex EDX"))
+        act_save_directivity.triggered.connect(lambda: self.on_export_file("Directivity"))
+        act_save_anim_video.triggered.connect(lambda: self.on_export_file("Video"))
         
-        act_plot_save_hrp_jpg.triggered.connect(lambda: self.on_export_file("HRP JPEG", "jpg"))
-        act_plot_save_vrp_jpg.triggered.connect(lambda: self.on_export_file("VRP JPEG", "jpg"))
-        act_plot_save_layout_jpg.triggered.connect(lambda: self.on_export_file("Layout JPEG", "jpg"))
-        act_plot_save_summary_pdf.triggered.connect(lambda: self.on_export_file("Summary PDF", "pdf"))
-        act_plot_save_panel_pdf.triggered.connect(lambda: self.on_export_file("Panel PDF", "pdf"))
-        act_plot_save_all_pdf.triggered.connect(lambda: self.on_export_file("All PDF", "pdf"))
+        act_plot_save_hrp_jpg.triggered.connect(lambda: self.on_export_file("HRP JPEG"))
+        act_plot_save_vrp_jpg.triggered.connect(lambda: self.on_export_file("VRP JPEG"))
+        act_plot_save_layout_jpg.triggered.connect(lambda: self.on_export_file("Layout JPEG"))
+        act_plot_save_hrp_pdf.triggered.connect(lambda: self.on_export_file("HRP PDF"))
+        act_plot_save_vrp_pdf.triggered.connect(lambda: self.on_export_file("VRP PDF"))
+        act_plot_save_summary_pdf.triggered.connect(lambda: self.on_export_file("Summary PDF"))
+        act_plot_save_panel_pdf.triggered.connect(lambda: self.on_export_file("Panel PDF"))
+        act_plot_save_all_pdf.triggered.connect(lambda: self.on_export_file("All PDF"))
         
         act_setup_coords_polar.triggered.connect(self.on_not_implemented)
         act_setup_coords_cart.triggered.connect(self.on_not_implemented)
@@ -330,6 +368,7 @@ class ADTMainWindow(QMainWindow):
         central_splitter = QSplitter(Qt.Orientation.Vertical)
         central_splitter.setChildrenCollapsible(False)
         central_splitter.setHandleWidth(5)
+        self.central_splitter = central_splitter
 
         # Central Top Tabs
         self.central_tabs = QTabWidget()
@@ -345,6 +384,7 @@ class ADTMainWindow(QMainWindow):
         plots_splitter = QSplitter(Qt.Orientation.Horizontal)
         plots_splitter.setChildrenCollapsible(False)
         plots_splitter.setHandleWidth(5)
+        self.plots_splitter = plots_splitter
 
         self.hrp_widget = HrpPlotWidget()
         # Mocking a group box look for the plots to match ADT
@@ -363,8 +403,12 @@ class ADTMainWindow(QMainWindow):
         plots_splitter.addWidget(vrp_group)
 
         plots_splitter.setSizes([700, 700])
+        plots_splitter.setStretchFactor(0, 1)
+        plots_splitter.setStretchFactor(1, 1)
         central_splitter.addWidget(plots_splitter)
         central_splitter.setSizes([560, 340])
+        central_splitter.setStretchFactor(0, 5)
+        central_splitter.setStretchFactor(1, 3)
 
         central_layout.addWidget(central_splitter)
         self.setCentralWidget(central_widget)
@@ -374,17 +418,20 @@ class ADTMainWindow(QMainWindow):
         # Wrap Design Info in a TabWidget to match the reference "Design Information | Site Details | Save Patterns"
         self.left_tabs = QTabWidget()
         self.design_info_widget = DesignInfoWidget()
+        self.save_patterns_widget = SavePatternsWidget()
         self.left_tabs.addTab(self.design_info_widget, "Design Information")
         self.left_tabs.addTab(QWidget(), "Site Details")
-        self.left_tabs.addTab(QWidget(), "Save Patterns")
+        self.left_tabs.addTab(self.save_patterns_widget, "Save Patterns")
         self.dock_left_top.setWidget(self.left_tabs)
         self.dock_left_top.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+        self.dock_left_top.setMinimumWidth(500)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.dock_left_top)
         
         self.dock_pattern_lib = QDockWidget("Pattern Library", self)
         self.pattern_library_widget = PatternLibraryWidget()
         self.dock_pattern_lib.setWidget(self.pattern_library_widget)
         self.dock_pattern_lib.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+        self.dock_pattern_lib.setMinimumWidth(500)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.dock_pattern_lib)
         
         self.splitDockWidget(self.dock_left_top, self.dock_pattern_lib, Qt.Orientation.Vertical)
@@ -394,12 +441,14 @@ class ADTMainWindow(QMainWindow):
         self.dock_result_summary.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
         self.result_summary_widget = ResultSummaryWidget()
         self.dock_result_summary.setWidget(self.result_summary_widget)
+        self.dock_result_summary.setMinimumWidth(330)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_result_summary)
         
         # Point Info (Azimuth, Elevation, Relative Field, Power from Peak) + Find Button
         from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QPushButton, QLabel
         self.dock_point_info = QDockWidget("Point Info", self)
         self.dock_point_info.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+        self.dock_point_info.setMinimumWidth(330)
         point_widget = QWidget()
         point_layout = QVBoxLayout(point_widget)
         point_layout.setContentsMargins(0, 0, 0, 0)
@@ -426,6 +475,7 @@ class ADTMainWindow(QMainWindow):
         
         self.dock_messages = QDockWidget("Messages", self)
         self.dock_messages.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+        self.dock_messages.setMinimumWidth(330)
         self.right_bottom_tabs = QTabWidget()
         self.message_list_widget = MessageListWidget()
         self.beam_shape_widget = BeamShapeWidget()
@@ -442,6 +492,8 @@ class ADTMainWindow(QMainWindow):
         # Wiring logic
         # DesignInfo is now inside a QTabWidget which is inside self.dock_left_top
         self.design_info_widget.calc_btn.clicked.connect(self.on_calculate_clicked)
+        self.save_patterns_widget.save_requested.connect(self.on_save_patterns_requested)
+        self.save_patterns_widget.error_requested.connect(self.on_save_patterns_error)
         self.hrp_widget.elevation_changed.connect(self.on_hrp_elevation_changed)
         self.vrp_widget.azimuth_changed.connect(self.on_vrp_azimuth_changed)
         self.beam_shape_widget.message_generated.connect(self.on_beam_shape_message)
@@ -464,6 +516,25 @@ class ADTMainWindow(QMainWindow):
             self.on_tower_geometry_generate_requested
         )
         self.central_tabs.currentChanged.connect(self._on_central_tab_changed)
+
+    def _apply_legacy_window_proportions(self):
+        self.resizeDocks(
+            [self.dock_left_top, self.dock_pattern_lib],
+            [580, 360],
+            Qt.Orientation.Vertical,
+        )
+        self.resizeDocks(
+            [self.dock_result_summary, self.dock_point_info, self.dock_messages],
+            [250, 230, 430],
+            Qt.Orientation.Vertical,
+        )
+        self.resizeDocks(
+            [self.dock_left_top, self.dock_result_summary],
+            [520, 360],
+            Qt.Orientation.Horizontal,
+        )
+        self.central_splitter.setSizes([590, 310])
+        self.plots_splitter.setSizes([1, 1])
 
     def init_catalog_bindings(self):
         self.design_info_widget.design_freq_input.editingFinished.connect(
@@ -848,24 +919,228 @@ class ADTMainWindow(QMainWindow):
             from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(self, "No Pattern Data", "Please calculate a 3D pattern before opening the Blackspot Viewer.")
             return
-            
+             
         dlg = BlackSpotViewer(self, mag_3d=self.last_mag_3d)
         dlg.exec()
 
-    def on_export_file(self, format_name, ext):
-        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+    def _build_export_context(self):
+        from app.project_service import build_project_from_ui
+        from exports.pattern_exporters import ExportContext
+
+        try:
+            project = build_project_from_ui(
+                self.design_info_widget,
+                self.antenna_design_tab,
+                self.pattern_library_widget,
+            )
+        except Exception:
+            project = self.last_project
+
+        hrp_elevation = (
+            self.selected_hrp_elevation_deg
+            if self.lock_hrp_elevation and self.selected_hrp_elevation_deg is not None
+            else (self.last_metrics or {}).get("_hrp_cut_elevation_deg")
+        )
+        vrp_azimuth = (
+            self.selected_vrp_azimuth_deg
+            if self.lock_vrp_azimuth and self.selected_vrp_azimuth_deg is not None
+            else (self.last_metrics or {}).get("_vrp_cut_azimuth_deg")
+        )
+
+        return ExportContext(
+            project=project,
+            metrics=self.last_metrics,
+            mag_3d=self.last_mag_3d,
+            az_angles=self.last_az_angles,
+            el_angles=self.last_el_angles,
+            hrp_elevation_deg=hrp_elevation,
+            vrp_azimuth_deg=vrp_azimuth,
+            normalised_vrp=False,
+            design_info_widget=self.design_info_widget,
+            antenna_design_widget=self.antenna_design_tab,
+            pattern_library_widget=self.pattern_library_widget,
+            result_summary_widget=self.result_summary_widget,
+            hrp_widget=self.hrp_widget,
+            vrp_widget=self.vrp_widget,
+            tower_preview_widget=self.tower_layout_tab.preview_widget,
+            logo_path=Path(__file__).resolve().with_name("logo.png"),
+            rotation_angle_deg=float(self.total_rotation_angle),
+        )
+
+    def _add_message(self, description):
+        self.message_list_widget.add_message(
+            datetime.now().strftime("%H:%M:%S"),
+            description,
+        )
+
+    def on_save_patterns_error(self, message):
+        QMessageBox.warning(self, "Save Patterns", message)
+        self._add_message(message)
+
+    def _ensure_pattern_ready_for_export(self):
+        if self.last_mag_3d is None or self.last_az_angles is None or self.last_el_angles is None:
+            raise ValueError("Please calculate a 3D pattern first.")
+
+    def _validate_export_base_path(self, base_path: str | Path) -> Path:
+        candidate = Path(base_path)
+        if str(candidate).strip() == "":
+            raise ValueError("Invalid file name")
+        if candidate.exists() and candidate.is_dir():
+            raise ValueError("Invalid file name")
+        base_name = self._export_base_name(candidate)
+        if base_name.strip(" .") == "":
+            raise ValueError("Invalid file name")
+        return candidate
+
+    def _export_base_name(self, candidate: Path) -> str:
+        base_name = candidate.name
+        while True:
+            stem = Path(base_name).stem
+            suffix = Path(base_name).suffix
+            if not suffix:
+                return base_name
+            base_name = stem
+
+    def _append_selection_formats(self, formats, selection, hrp_format=None, vrp_format=None, d3_format=None):
+        if selection == "HRP" and hrp_format:
+            formats.append(hrp_format)
+        elif selection == "VRP" and vrp_format:
+            formats.append(vrp_format)
+        elif selection == "HRP & VRP":
+            if hrp_format:
+                formats.append(hrp_format)
+            if vrp_format:
+                formats.append(vrp_format)
+        elif selection == "3D" and d3_format:
+            formats.append(d3_format)
+
+    def _save_patterns_formats(self, settings: SavePatternsSettings):
+        formats = []
+        if settings.save_jpg:
+            self._append_selection_formats(formats, settings.jpg_target, "HRP JPEG", "VRP JPEG")
+        if settings.save_tabdata:
+            self._append_selection_formats(formats, settings.tabdata_target, "HRP PDF", "VRP PDF")
+        if settings.save_pat:
+            self._append_selection_formats(formats, settings.pat_target, "HRP PAT", "VRP PAT")
+        if settings.save_txt:
+            self._append_selection_formats(formats, settings.txt_target, "HRP Text", "VRP Text")
+        if settings.save_csv:
+            self._append_selection_formats(formats, settings.csv_target, "HRP CSV", "VRP CSV")
+        if settings.save_vsoft:
+            self._append_selection_formats(formats, settings.vsoft_target, "HRP V-Soft", "VRP V-Soft")
+        if settings.save_atdi:
+            self._append_selection_formats(formats, settings.atdi_target, "HRP ATDI", "VRP ATDI", "3D ATDI")
+        if settings.save_3d_text:
+            formats.append("3D Text")
+        if settings.save_ngw3d:
+            formats.append("NGW3D")
+        if settings.save_prn:
+            formats.append("PRN")
+        if settings.save_edx:
+            formats.append("EDX" if settings.edx_file_type == "Simple file-1 VRP" else "Complex EDX")
+        return formats
+
+    def _save_patterns_target_path(self, base_path: Path, format_name: str) -> Path:
+        base_dir = base_path.parent
+        base_name = self._export_base_name(base_path)
+        file_names = {
+            "HRP JPEG": f"{base_name}_HRP.jpg",
+            "VRP JPEG": f"{base_name}_VRP.jpg",
+            "HRP PDF": f"{base_name}_HRP.pdf",
+            "VRP PDF": f"{base_name}_VRP.pdf",
+            "HRP PAT": f"{base_name}_HRP.pat",
+            "VRP PAT": f"{base_name}_VRP.pat",
+            "HRP Text": f"{base_name}_HRP.txt",
+            "VRP Text": f"{base_name}_VRP.txt",
+            "HRP CSV": f"{base_name}_HRP.csv",
+            "VRP CSV": f"{base_name}_VRP.csv",
+            "HRP V-Soft": f"{base_name}_HRP.vep",
+            "VRP V-Soft": f"{base_name}_VRP.vep",
+            "HRP ATDI": f"{base_name}.H_DIA.DIA",
+            "VRP ATDI": f"{base_name}.V_DIA.DIA",
+            "3D ATDI": f"{base_name} ATDI_3d.csv",
+            "3D Text": f"{base_name}.3dp",
+            "NGW3D": f"{base_name}.ng3dant",
+            "PRN": f"{base_name}.prn",
+            "EDX": f"{base_name}.ProgiraEDX.pat",
+            "Complex EDX": f"{base_name}.ProgiraEDX.pat",
+        }
+        return base_dir / file_names[format_name]
+
+    def export_selected_patterns(self, base_path: str | Path, settings: SavePatternsSettings):
         from exports.pattern_exporters import export_to_format
-        
-        path, _ = QFileDialog.getSaveFileName(self, f"Export as {format_name}", "", f"{format_name} Files (*.{ext});;All Files (*)")
+
+        selected_formats = self._save_patterns_formats(settings)
+        if not selected_formats:
+            raise ValueError("Tick at least one pattern file format")
+        self._ensure_pattern_ready_for_export()
+
+        context = self._build_export_context()
+        context.edx_peak_hrp = settings.edx_hrp_used == "Peak HRP"
+        context.edx_start_deg = float(settings.edx_start_deg)
+        context.edx_stop_deg = float(settings.edx_stop_deg)
+        context.edx_increment_deg = float(settings.edx_increment_deg)
+        context.export_image_scale = float(settings.image_resolution_scale)
+
+        saved_paths = []
+        base_path = self._validate_export_base_path(base_path)
+        for format_name in selected_formats:
+            target = self._save_patterns_target_path(base_path, format_name)
+            export_to_format(format_name, target, context)
+            saved_paths.append(target)
+        return saved_paths
+
+    def on_save_patterns_requested(self, settings: SavePatternsSettings):
+        try:
+            self._ensure_pattern_ready_for_export()
+        except Exception as exc:
+            self.on_save_patterns_error(str(exc))
+            return
+
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Patterns Base Name",
+            str(Path.home() / "pattern_export"),
+            "Base Name (*)",
+        )
+        if not path:
+            return
+
+        try:
+            saved_paths = self.export_selected_patterns(path, settings)
+            self._add_message(f"Save patterns complete ({len(saved_paths)} files)")
+            QMessageBox.information(
+                self,
+                "Save Patterns",
+                f"Successfully exported {len(saved_paths)} file(s) to\n{Path(path).parent}",
+            )
+        except Exception as exc:
+            self.on_save_patterns_error(str(exc))
+
+    def on_export_file(self, format_name):
+        from exports.pattern_exporters import export_to_format, get_export_definition
+
+        definition = get_export_definition(format_name)
+        if definition.requires_pattern:
+            try:
+                self._ensure_pattern_ready_for_export()
+            except Exception as exc:
+                QMessageBox.warning(self, "Error", str(exc))
+                return
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            definition.label,
+            str(Path.home() / "pattern_export"),
+            definition.file_filter,
+        )
         if path:
             try:
-                mag = getattr(self, 'last_mag_3d', None)
-                az = getattr(self, 'last_az_angles', None)
-                el = getattr(self, 'last_el_angles', None)
-                export_to_format(format_name, path, mag, az, el)
+                if definition.suffix and not path.lower().endswith(definition.suffix.lower()):
+                    path += definition.suffix
+                export_to_format(format_name, path, self._build_export_context())
                 QMessageBox.information(self, "Exported", f"Successfully exported to {path}")
             except Exception as e:
-                QMessageBox.warning(self, "Error", f"Could not export: {str(e)}\n\nMake sure to run 'Calculate 3D Pattern' first.")
+                QMessageBox.warning(self, "Error", f"Could not export: {str(e)}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
