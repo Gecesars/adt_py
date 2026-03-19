@@ -40,6 +40,21 @@ class RadiationPlotWidgetTests(unittest.TestCase):
         self.assertEqual(widget.magnitudes.size, 0)
         self.assertEqual(widget.dir_edit.text(), "")
 
+    def test_hrp_plot_widget_preserves_absolute_cut_level_like_original_adt(self):
+        widget = HrpPlotWidget()
+        angles = np.arange(-180.0, 180.0, 1.0)
+        magnitudes = np.full(angles.shape, 0.5)
+
+        widget.plot_data(angles, magnitudes)
+
+        radii = widget._scaled_radius()
+        self.assertAlmostEqual(float(np.max(radii)), 0.5, places=12)
+
+        widget.rb_db.setChecked(True)
+        db_radii = widget._scaled_radius()
+        expected_db_radius = (20.0 * np.log10(0.5) - (-40.0)) / 40.0
+        self.assertAlmostEqual(float(np.max(db_radii)), expected_db_radius, places=12)
+
     def test_vrp_plot_widget_accepts_data_metadata_and_range(self):
         widget = VrpPlotWidget()
         angles = np.linspace(-90.0, 90.0, 181)

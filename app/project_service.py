@@ -255,7 +255,7 @@ def project_to_array_design(project: Project) -> ArrayDesign:
         runtime_panel.phase = effective_phase
         # ADT stores the Array Data tilt with the opposite sign of the runtime AntPanel tilt.
         runtime_panel.tilt = -panel.tilt_deg
-        runtime_panel.face_angle = panel.azimuth_deg
+        runtime_panel.face_angle = round(panel.azimuth_deg, 0)
         runtime_panel.configuration = panel.configuration
         runtime_panel.design_frequency = project.metadata.design_frequency_mhz
         runtime_panel.hrp_path = pattern.hrp_path

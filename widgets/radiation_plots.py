@@ -154,9 +154,6 @@ class HrpPlotWidget(QWidget):
             return np.array([])
 
         values = np.asarray(self.magnitudes, dtype=float)
-        peak = float(np.max(values))
-        if peak > 0:
-            values = values / peak
 
         if self.rb_e_emax.isChecked():
             return np.clip(values, 0.0, 1.0)

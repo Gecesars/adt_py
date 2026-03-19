@@ -366,6 +366,28 @@ def _interpolate_bounded_complex(source_angles, source_field, target_angles):
     return real + 1j * imag
 
 
+def _map_hrp_field_to_target(source_angles, source_field, target_angles):
+    source_angles = np.asarray(source_angles, dtype=float)
+    source_field = np.asarray(source_field, dtype=complex)
+    target_angles = np.asarray(target_angles, dtype=float)
+
+    if source_angles.size == target_angles.size:
+        sorted_angles = np.sort(source_angles)
+        if np.allclose(sorted_angles, target_angles, rtol=0.0, atol=1e-10):
+            mapped = np.zeros_like(target_angles, dtype=complex)
+            for angle_deg, field_value in zip(source_angles, source_field):
+                index = int(np.argmin(np.abs(target_angles - angle_deg)))
+                mapped[index] = field_value
+            return mapped
+
+    order = np.argsort(source_angles)
+    return _interpolate_periodic_complex(
+        source_angles[order],
+        source_field[order],
+        target_angles,
+    )
+
+
 def _map_vrp_field_to_target(source_angles, source_field, target_angles):
     rounded_angles = np.round(np.asarray(source_angles, dtype=float), 1)
     field = np.asarray(source_field, dtype=complex)
@@ -466,17 +488,14 @@ def configure_horizontal_pattern(
     if power_linear <= 0:
         return target_angles, np.zeros_like(target_angles, dtype=complex)
 
-    source_field = complex_from_mag_phase(magnitude, phase_deg)
-    sample_angles = wrap_to_minus180_plus180(target_angles - azimuth_shift_deg)
-    rotated_field = _interpolate_periodic_complex(angles_deg, source_field, sample_angles)
-
-    rotated_magnitude = np.abs(rotated_field) * np.sqrt(power_linear)
-    rotated_phase_deg = np.angle(rotated_field, deg=True)
-
     wavelength_m = 300.0 / frequency_mhz
+    configured_angles_deg = wrap_to_minus180_plus180(
+        angles_deg + round(float(azimuth_shift_deg), 0)
+    )
+    configured_magnitude = magnitude * np.sqrt(power_linear)
     spatial_phase_deg = (
-        y_offset_m * np.cos(np.deg2rad(sample_angles)) / wavelength_m * 360.0
-        + x_offset_m * np.sin(np.deg2rad(sample_angles)) / wavelength_m * 360.0
+        y_offset_m * np.cos(np.deg2rad(configured_angles_deg)) / wavelength_m * 360.0
+        + x_offset_m * np.sin(np.deg2rad(configured_angles_deg)) / wavelength_m * 360.0
     )
     configured_phase_deg = calculate_configuration_phase_deg(
         panel_phase_deg,
@@ -484,8 +503,13 @@ def configure_horizontal_pattern(
         frequency_mhz,
         design_frequency_mhz or frequency_mhz,
     )
-    total_phase_deg = rotated_phase_deg + spatial_phase_deg + configured_phase_deg
-    return target_angles, complex_from_mag_phase(rotated_magnitude, total_phase_deg)
+    total_phase_deg = phase_deg + spatial_phase_deg + configured_phase_deg
+    configured_field = complex_from_mag_phase(configured_magnitude, total_phase_deg)
+    return target_angles, _map_hrp_field_to_target(
+        configured_angles_deg,
+        configured_field,
+        target_angles,
+    )
 
 
 def configure_vertical_pattern(
