@@ -2,8 +2,17 @@ import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QTabWidget, QDockWidget, QMenuBar, QMenu, QStatusBar,
                              QHBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem,
-                             QHeaderView, QPushButton, QLabel)
-from PyQt6.QtCore import Qt
+                             QHeaderView, QPushButton, QLabel, QSplitter)
+from PyQt6.QtCore import Qt, QLocale
+
+from catalogs import OriginalAdtCatalog
+from solver.pattern_synthesis import (
+    compute_hrp_cut_directivity_db,
+    compute_vrp_cut_directivity_db,
+    extract_hrp_cut,
+    extract_vrp_cut,
+    get_vrp_beam_tilt_deg,
+)
 
 # Import widget components
 from widgets.design_info import DesignInfoWidget
@@ -11,24 +20,54 @@ from widgets.pattern_library import PatternLibraryWidget
 from widgets.antenna_design import AntennaDesignWidget
 from widgets.tower_layout import TowerLayoutWidget
 from widgets.compensation import CompensationWidget
-from widgets.radiation_plots import HrpPlotWidget, VrpPlotWidget
+from widgets.radiation_plots import (
+    HrpPlotWidget,
+    VrpPlotWidget,
+    display_to_internal_azimuth,
+)
 from widgets.result_summary import ResultSummaryWidget
 from widgets.message_list import MessageListWidget
 from widgets.beam_shape import BeamShapeWidget
 
 
+def _parse_float_text(value, default):
+    try:
+        if value is None or value == "":
+            return default
+        return float(str(value).strip().replace(",", "."))
+    except (TypeError, ValueError):
+        return default
+
+
 class ADTMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        QLocale.setDefault(QLocale.c())
         self.setWindowTitle("Antenna Design Tool (ADT) - Python Version")
         self.resize(1400, 900)
+        self.last_project = None
         self.last_mag_3d = None
         self.last_az_angles = None
         self.last_el_angles = None
         self.last_metrics = None
+        self.selected_hrp_elevation_deg = None
+        self.selected_vrp_azimuth_deg = None
+        self.lock_hrp_elevation = False
+        self.lock_vrp_azimuth = False
+        self.total_rotation_angle = 0.0
+        self.total_tilt_actions = []
+        try:
+            self.original_adt_catalog = OriginalAdtCatalog()
+        except Exception:
+            self.original_adt_catalog = None
         
         self.init_menu()
         self.init_ui()
+        self.init_catalog_bindings()
+        self.refresh_predefined_panel_catalog()
+        self.refresh_beam_shape_frequency()
+        self._sync_design_panel_count_from_array()
+        self.refresh_tower_layout_preview()
         
     def init_menu(self):
         menubar = self.menuBar()
@@ -261,7 +300,7 @@ class ADTMainWindow(QMainWindow):
         act_spec_set_vrp.triggered.connect(self.on_not_implemented)
         act_spec_clear_vrp.triggered.connect(self.on_not_implemented)
         
-        act_util_beam.triggered.connect(self.on_not_implemented)
+        act_util_beam.triggered.connect(lambda: self._focus_tab(self.right_bottom_tabs, 1))
         act_util_blackspot.triggered.connect(self.on_util_blackspot)
         act_util_geom.triggered.connect(self.on_not_implemented)
         act_util_dist.triggered.connect(self.on_util_dist)
@@ -286,7 +325,12 @@ class ADTMainWindow(QMainWindow):
         central_widget = QWidget()
         central_layout = QVBoxLayout(central_widget)
         central_layout.setContentsMargins(0, 0, 0, 0)
-        
+        central_layout.setSpacing(0)
+
+        central_splitter = QSplitter(Qt.Orientation.Vertical)
+        central_splitter.setChildrenCollapsible(False)
+        central_splitter.setHandleWidth(5)
+
         # Central Top Tabs
         self.central_tabs = QTabWidget()
         self.antenna_design_tab = AntennaDesignWidget()
@@ -295,28 +339,34 @@ class ADTMainWindow(QMainWindow):
         self.central_tabs.addTab(self.tower_layout_tab, "Tower and Panel Layout")
         self.compensation_tab = CompensationWidget()
         self.central_tabs.addTab(self.compensation_tab, "Imp Compensation / Array Imp")
-        central_layout.addWidget(self.central_tabs, stretch=2)
-        
+        central_splitter.addWidget(self.central_tabs)
+
         # Central Bottom Plots (Horizontal Split)
-        plots_widget = QWidget()
-        plots_layout = QHBoxLayout(plots_widget)
-        plots_layout.setContentsMargins(0, 0, 0, 0)
-        
+        plots_splitter = QSplitter(Qt.Orientation.Horizontal)
+        plots_splitter.setChildrenCollapsible(False)
+        plots_splitter.setHandleWidth(5)
+
         self.hrp_widget = HrpPlotWidget()
         # Mocking a group box look for the plots to match ADT
         from PyQt6.QtWidgets import QGroupBox
         hrp_group = QGroupBox("Horizontal Radiation Pattern")
         hl1 = QVBoxLayout(hrp_group)
+        hl1.setContentsMargins(6, 10, 6, 6)
         hl1.addWidget(self.hrp_widget)
-        plots_layout.addWidget(hrp_group)
-        
+        plots_splitter.addWidget(hrp_group)
+
         self.vrp_widget = VrpPlotWidget()
         vrp_group = QGroupBox("Vertical Radiation Pattern")
         hl2 = QVBoxLayout(vrp_group)
+        hl2.setContentsMargins(6, 10, 6, 6)
         hl2.addWidget(self.vrp_widget)
-        plots_layout.addWidget(vrp_group)
-        
-        central_layout.addWidget(plots_widget, stretch=1)
+        plots_splitter.addWidget(vrp_group)
+
+        plots_splitter.setSizes([700, 700])
+        central_splitter.addWidget(plots_splitter)
+        central_splitter.setSizes([560, 340])
+
+        central_layout.addWidget(central_splitter)
         self.setCentralWidget(central_widget)
         
         # --- LEFT DOCKS (Top: Design Info Tabs, Bottom: Pattern Library) ---
@@ -342,7 +392,8 @@ class ADTMainWindow(QMainWindow):
         # --- RIGHT DOCKS (Top: Result Summary, Middle: Point Info/Find, Bottom: Message List Tabs) ---
         self.dock_result_summary = QDockWidget("Result Summary", self)
         self.dock_result_summary.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
-        self.dock_result_summary.setWidget(ResultSummaryWidget())
+        self.result_summary_widget = ResultSummaryWidget()
+        self.dock_result_summary.setWidget(self.result_summary_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_result_summary)
         
         # Point Info (Azimuth, Elevation, Relative Field, Power from Peak) + Find Button
@@ -391,80 +442,317 @@ class ADTMainWindow(QMainWindow):
         # Wiring logic
         # DesignInfo is now inside a QTabWidget which is inside self.dock_left_top
         self.design_info_widget.calc_btn.clicked.connect(self.on_calculate_clicked)
+        self.hrp_widget.elevation_changed.connect(self.on_hrp_elevation_changed)
+        self.vrp_widget.azimuth_changed.connect(self.on_vrp_azimuth_changed)
+        self.beam_shape_widget.message_generated.connect(self.on_beam_shape_message)
+        self.beam_shape_widget.phase_transfer_requested.connect(
+            self.on_beam_shape_transfer_requested
+        )
+        self.tower_layout_tab.rotation_apply_requested.connect(
+            self.on_tower_rotation_apply_requested
+        )
+        self.tower_layout_tab.rotation_reset_requested.connect(
+            self.on_tower_rotation_reset_requested
+        )
+        self.tower_layout_tab.tilt_apply_requested.connect(
+            self.on_tower_tilt_apply_requested
+        )
+        self.tower_layout_tab.tilt_reset_requested.connect(
+            self.on_tower_tilt_reset_requested
+        )
+        self.tower_layout_tab.geometry_generate_requested.connect(
+            self.on_tower_geometry_generate_requested
+        )
+        self.central_tabs.currentChanged.connect(self._on_central_tab_changed)
+
+    def init_catalog_bindings(self):
+        self.design_info_widget.design_freq_input.editingFinished.connect(
+            self._on_design_frequency_changed
+        )
+        self.design_info_widget.channel_freq_input.editingFinished.connect(
+            self.refresh_predefined_panel_catalog
+        )
+        self.design_info_widget.polarisation_combo.currentTextChanged.connect(
+            lambda _text: self.refresh_predefined_panel_catalog()
+        )
+
+    def _on_design_frequency_changed(self):
+        self.refresh_predefined_panel_catalog()
+        self.refresh_beam_shape_frequency()
+
+    def _on_central_tab_changed(self, index):
+        if self.central_tabs.widget(index) is self.tower_layout_tab:
+            self.refresh_tower_layout_preview()
+
+    def refresh_beam_shape_frequency(self):
+        frequency_mhz = _parse_float_text(
+            self.design_info_widget.design_freq_input.text(),
+            539.0,
+        )
+        self.beam_shape_widget.update_frequency(frequency_mhz)
+
+    def refresh_tower_layout_preview(self):
+        if not hasattr(self, "tower_layout_tab"):
+            return
+        self.tower_layout_tab.update_preview(
+            self.antenna_design_tab.get_array_data(),
+            self.pattern_library_widget.get_pattern_configs(),
+        )
+
+    def _sync_design_panel_count_from_array(self):
+        if not hasattr(self, "design_info_widget") or not hasattr(self, "antenna_design_tab"):
+            return
+
+        panel_count = max(1, len(self.antenna_design_tab.get_array_data()))
+        if self.design_info_widget.num_panels_spin.value() == panel_count:
+            return
+
+        previous_state = self.design_info_widget.num_panels_spin.blockSignals(True)
+        try:
+            self.design_info_widget.num_panels_spin.setValue(panel_count)
+        finally:
+            self.design_info_widget.num_panels_spin.blockSignals(previous_state)
+
+    def _add_message(self, description):
+        import datetime
+
+        time_str = datetime.datetime.now().strftime("%I:%M:%S %p")
+        self.message_list_widget.add_message(time_str, description)
+
+    def _invalidate_calculation_outputs(self, reason=None):
+        self.last_project = None
+        self.last_mag_3d = None
+        self.last_az_angles = None
+        self.last_el_angles = None
+        self.last_metrics = None
+        self.selected_hrp_elevation_deg = None
+        self.selected_vrp_azimuth_deg = None
+        self.lock_hrp_elevation = False
+        self.lock_vrp_azimuth = False
+        self.hrp_widget.clear_plot_display()
+        self.hrp_widget.set_selected_azimuth(0.0)
+        self.vrp_widget.clear_plot_display()
+        self.result_summary_widget.clear_results()
+        if reason:
+            self._add_message(reason)
+
+    def _refresh_hrp_plot(self, elevation_deg=None):
+        if self.last_mag_3d is None or self.last_az_angles is None or self.last_el_angles is None:
+            return
+
+        hrp_angles, hrp_cut, hrp_elevation = extract_hrp_cut(
+            self.last_mag_3d,
+            self.last_az_angles,
+            self.last_el_angles,
+            elevation_deg=elevation_deg,
+        )
+        peak_hrp_cut = (
+            self.last_metrics.get("_hrp_cut_magnitude")
+            if isinstance(self.last_metrics, dict)
+            else hrp_cut
+        )
+        hrp_directivity = compute_hrp_cut_directivity_db(hrp_cut, peak_hrp_cut)
+        self.hrp_widget.plot_data(hrp_angles, hrp_cut)
+        self.hrp_widget.set_cut_metadata(
+            elevation_deg=hrp_elevation,
+            directivity_dbd=hrp_directivity,
+        )
+        if not self.lock_hrp_elevation:
+            self.selected_hrp_elevation_deg = hrp_elevation
+
+        selected_azimuth = self.selected_vrp_azimuth_deg
+        if selected_azimuth is None and isinstance(self.last_metrics, dict):
+            selected_azimuth = self.last_metrics.get("_vrp_cut_azimuth_deg", 0.0)
+        self.hrp_widget.set_selected_azimuth(selected_azimuth)
+
+    def _refresh_vrp_plot(self, azimuth_deg=None):
+        if self.last_mag_3d is None or self.last_az_angles is None or self.last_el_angles is None:
+            return
+
+        vrp_angles, vrp_cut, vrp_azimuth = extract_vrp_cut(
+            self.last_mag_3d,
+            self.last_az_angles,
+            self.last_el_angles,
+            azimuth_deg=azimuth_deg,
+        )
+        peak_vrp_cut = (
+            self.last_metrics.get("_vrp_cut_magnitude")
+            if isinstance(self.last_metrics, dict)
+            else vrp_cut
+        )
+        vrp_directivity = compute_vrp_cut_directivity_db(
+            vrp_angles,
+            vrp_cut,
+            peak_vrp_cut,
+        )
+        vrp_tilt_deg = get_vrp_beam_tilt_deg(vrp_angles, vrp_cut)
+        self.vrp_widget.plot_data(vrp_angles, vrp_cut)
+        self.vrp_widget.set_cut_metadata(
+            azimuth_deg=vrp_azimuth,
+            directivity_dbd=vrp_directivity,
+            tilt_deg=vrp_tilt_deg,
+        )
+        if not self.lock_vrp_azimuth:
+            self.selected_vrp_azimuth_deg = vrp_azimuth
+        self.hrp_widget.set_selected_azimuth(vrp_azimuth)
+
+    def on_hrp_elevation_changed(self, elevation_deg):
+        self.selected_hrp_elevation_deg = float(elevation_deg)
+        self.lock_hrp_elevation = True
+        self._refresh_hrp_plot(elevation_deg=elevation_deg)
+
+    def on_vrp_azimuth_changed(self, azimuth_deg):
+        internal_azimuth_deg = display_to_internal_azimuth(azimuth_deg)
+        self.selected_vrp_azimuth_deg = float(internal_azimuth_deg)
+        self.lock_vrp_azimuth = True
+        self.hrp_widget.set_selected_azimuth(internal_azimuth_deg)
+        self._refresh_vrp_plot(
+            azimuth_deg=internal_azimuth_deg
+        )
+
+    def on_beam_shape_message(self, message):
+        self._add_message(message)
+
+    def on_beam_shape_transfer_requested(self, phases, decimal_places):
+        self.antenna_design_tab.update_v_group_phases(phases, decimal_places)
+        self._invalidate_calculation_outputs(
+            "Vertical Group Phi updated from Beam Shape. HRP/VRP cleared; run Calculate 3D Pattern to refresh the diagrams."
+        )
+
+    def on_tower_rotation_apply_requested(self, rotation_deg):
+        self.total_rotation_angle += float(rotation_deg)
+        self.antenna_design_tab.rotate_array(float(rotation_deg))
+        self.refresh_tower_layout_preview()
+        self._invalidate_calculation_outputs(
+            f"Tower layout rotation of {float(rotation_deg):0.1f}° applied to the array."
+        )
+
+    def on_tower_rotation_reset_requested(self):
+        if abs(self.total_rotation_angle) > 1e-9:
+            self.antenna_design_tab.rotate_array(-self.total_rotation_angle)
+            self.total_rotation_angle = 0.0
+        self.tower_layout_tab.reset_rotation_to_zero()
+        self.refresh_tower_layout_preview()
+        self._invalidate_calculation_outputs(
+            "Tower layout rotation reset to zero."
+        )
+
+    def on_tower_tilt_apply_requested(self, tilt_deg, direction_deg):
+        tilt_value = float(tilt_deg)
+        direction_value = float(direction_deg)
+        self.total_tilt_actions.append((tilt_value, direction_value))
+        self.antenna_design_tab.mech_tilt_array(tilt_value, direction_value)
+        self.refresh_tower_layout_preview()
+        self._invalidate_calculation_outputs(
+            f"Mechanical tilt of {tilt_value:0.1f}° at {direction_value:0.1f}° applied to the array."
+        )
+
+    def on_tower_tilt_reset_requested(self):
+        for tilt_deg, direction_deg in reversed(self.total_tilt_actions):
+            self.antenna_design_tab.mech_tilt_array(-tilt_deg, direction_deg)
+        self.total_tilt_actions.clear()
+        self.tower_layout_tab.reset_tilt_to_zero()
+        self.refresh_tower_layout_preview()
+        self._invalidate_calculation_outputs(
+            "Mechanical tilt reset to zero."
+        )
+
+    def on_tower_geometry_generate_requested(
+        self,
+        face_count,
+        offset_m,
+        heading_deg,
+        level_count,
+        spacing_m,
+        cogged,
+    ):
+        self.total_rotation_angle = 0.0
+        self.total_tilt_actions.clear()
+        self.antenna_design_tab.build_geometry(
+            int(face_count),
+            float(offset_m),
+            float(heading_deg),
+            int(level_count),
+            float(spacing_m),
+            bool(cogged),
+        )
+        self._sync_design_panel_count_from_array()
+        self.refresh_tower_layout_preview()
+        self._invalidate_calculation_outputs(
+            "Tower geometry regenerated and applied to Array Data."
+        )
+
+    def _get_catalog_frequency_mhz(self):
+        for value in (
+            self.design_info_widget.channel_freq_input.text(),
+            self.design_info_widget.design_freq_input.text(),
+        ):
+            parsed = _parse_float_text(value, None)
+            if parsed is not None:
+                return parsed
+        return 539.0
+
+    def refresh_predefined_panel_catalog(self):
+        if self.original_adt_catalog is None:
+            return
+
+        try:
+            frequency_mhz = self._get_catalog_frequency_mhz()
+            polarization = self.design_info_widget.polarisation_combo.currentText()
+            entries = self.original_adt_catalog.get_standard_panel_entries(
+                frequency_mhz,
+                polarization,
+            )
+            self.pattern_library_widget.set_predefined_panel_options(entries)
+            if hasattr(self, "tower_layout_tab"):
+                self.refresh_tower_layout_preview()
+        except Exception as error:
+            if hasattr(self, "message_list_widget"):
+                import datetime
+
+                time_str = datetime.datetime.now().strftime("%I:%M:%S %p")
+                self.message_list_widget.add_message(
+                    time_str,
+                    f"Catalog refresh failed: {error}",
+                )
 
     def on_calculate_clicked(self):
-        import datetime
-        from models.antenna import ArrayDesign, AntennaPanel
-        from solver.system_metrics import calculate_system_metrics
+        from app.project_service import build_project_from_ui, calculate_project_metrics
         
-        # Scrape data from UI docks
         try:
-            freq_str = self.design_info_widget.design_freq_input.text()
-            frequency = float(freq_str) if freq_str else 539.0
-            
-            pattern_configs = self.pattern_library_widget.get_pattern_configs()
-            array_data = self.antenna_design_tab.get_array_data()
-            
-            # Build the backend models
-            array_design = ArrayDesign()
-            array_design.frequency = frequency
-            
-            for p_data in array_data:
-                panel = AntennaPanel(p_data['panel_id'], "Standard")
-                panel.y = p_data['y']
-                panel.power = p_data['power']
-                panel.phase = p_data['phase']
-                panel.tilt = p_data['tilt']
-                
-                # Link valid paths from pattern library if matched
-                pat_index = p_data['pat']
-                if pat_index in pattern_configs:
-                    panel.hrp_path = pattern_configs[pat_index].get('hrp_path', '')
-                    panel.vrp_path = pattern_configs[pat_index].get('vrp_path', '')
-                    
-                array_design.add_panel(panel)
-        
-            # Read Loss Fields
-            try:
-                i_loss = float(self.design_info_widget.internal_loss_input.text())
-                p_loss = float(self.design_info_widget.pol_loss_input.text())
-                filt_loss = float(self.design_info_widget.filter_loss_input.text())
-                feed_loss = float(self.design_info_widget.feeder_loss_input.text())
-            except ValueError:
-                i_loss, p_loss, filt_loss, feed_loss = 0.5, 3.0, 0.8, 1.2
-        
-            # Run backend physics synthesis based exclusively on the UI
-            metrics, mag_3d, az_angles, el_angles = calculate_system_metrics(
-                array_design, 
-                internal_loss=i_loss, 
-                pol_loss=p_loss, 
-                filter_loss=filt_loss, 
-                feeder_loss=feed_loss
+            project = build_project_from_ui(
+                self.design_info_widget,
+                self.antenna_design_tab,
+                self.pattern_library_widget,
             )
-            
-            # Cache results for Exporters
+            metrics, mag_3d, az_angles, el_angles = calculate_project_metrics(project)
+
+            self.last_project = project
             self.last_mag_3d = mag_3d
             self.last_az_angles = az_angles
             self.last_el_angles = el_angles
             self.last_metrics = metrics
             
-            # Update result UI tabs
-            self.dock_result_summary.widget().update_results(metrics)
-            
-            # Update plot widgets
-            self.hrp_widget.plot_data(az_angles, mag_3d[:, 900])
-            self.vrp_widget.plot_data(el_angles, mag_3d[0, :])
-            
-            # Update message log
-            time_str = datetime.datetime.now().strftime("%I:%M:%S %p")
-            self.message_list_widget.add_message(
-                time_str,
-                "Calculated 3D pattern using the selected pattern files.",
+            self.result_summary_widget.update_results(metrics)
+            hrp_elevation = (
+                self.selected_hrp_elevation_deg
+                if self.lock_hrp_elevation and self.selected_hrp_elevation_deg is not None
+                else metrics.get("_hrp_cut_elevation_deg")
+            )
+            vrp_azimuth = (
+                self.selected_vrp_azimuth_deg
+                if self.lock_vrp_azimuth and self.selected_vrp_azimuth_deg is not None
+                else metrics.get("_vrp_cut_azimuth_deg")
+            )
+            self._refresh_hrp_plot(hrp_elevation)
+            self._refresh_vrp_plot(vrp_azimuth)
+            self.refresh_tower_layout_preview()
+            self._add_message(
+                "Calculated 3D pattern and refreshed HRP/VRP displays from the 3D field."
             )
         
         except Exception as e:
-            time_str = datetime.datetime.now().strftime("%I:%M:%S %p")
-            self.message_list_widget.add_message(time_str, f"Error calculating pattern: {str(e)}")
+            self._add_message(f"Error calculating pattern: {str(e)}")
 
     def on_not_implemented(self):
         from PyQt6.QtWidgets import QMessageBox
@@ -472,15 +760,62 @@ class ADTMainWindow(QMainWindow):
 
     def on_file_open(self):
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
-        path, _ = QFileDialog.getOpenFileName(self, "Open Project", "", "Project Files (*.antr);;All Files (*)")
+        from app.project_service import apply_project_to_ui
+        from infra.project_store import load_project
+
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Project",
+            "",
+            "ADT_PY Project Files (*.adpy.json *.json);;All Files (*)",
+        )
         if path:
-            QMessageBox.information(self, "Loaded", f"Loaded project: {path}")
+            try:
+                project = load_project(path)
+                apply_project_to_ui(
+                    project,
+                    self.design_info_widget,
+                    self.antenna_design_tab,
+                    self.pattern_library_widget,
+                )
+                self.refresh_predefined_panel_catalog()
+                self.refresh_beam_shape_frequency()
+                self.total_rotation_angle = 0.0
+                self.total_tilt_actions.clear()
+                self._invalidate_calculation_outputs()
+                self.last_project = project
+                self._sync_design_panel_count_from_array()
+                self.refresh_tower_layout_preview()
+                QMessageBox.information(self, "Loaded", f"Loaded project: {path}")
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Could not load project: {str(e)}")
 
     def on_file_save(self):
+        from pathlib import Path
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
-        path, _ = QFileDialog.getSaveFileName(self, "Save Project", "", "Project Files (*.antr);;All Files (*)")
+        from app.project_service import build_project_from_ui
+        from infra.project_store import save_project
+
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Project",
+            "",
+            "ADT_PY Project Files (*.adpy.json);;JSON Files (*.json);;All Files (*)",
+        )
         if path:
-            QMessageBox.information(self, "Saved", f"Saved project to: {path}")
+            try:
+                if Path(path).suffix.lower() != ".json" and not path.endswith(".adpy.json"):
+                    path += ".adpy.json"
+                project = build_project_from_ui(
+                    self.design_info_widget,
+                    self.antenna_design_tab,
+                    self.pattern_library_widget,
+                )
+                save_project(path, project)
+                self.last_project = project
+                QMessageBox.information(self, "Saved", f"Saved project to: {path}")
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Could not save project: {str(e)}")
 
     def on_util_dist(self):
         from widgets.dis_and_bear import DistanceBearingDialog
@@ -490,20 +825,18 @@ class ADTMainWindow(QMainWindow):
     def on_util_exposure(self):
         from widgets.field_strength import FieldStrengthExposureDialog
 
-        try:
-            tx_pow = float((self.last_metrics or {}).get("Transmitter Power (kW)", 10.0))
-        except ValueError:
-            tx_pow = 10.0
-
-        try:
-            erp = float((self.last_metrics or {}).get("ERP (kW)", tx_pow))
-        except ValueError:
-            erp = tx_pow
-
-        try:
-            freq = float(self.design_info_widget.channel_freq_input.text() or 539.0)
-        except ValueError:
-            freq = 539.0
+        tx_pow = _parse_float_text(
+            (self.last_metrics or {}).get("Transmitter Power (kW)", 10.0),
+            10.0,
+        )
+        erp = _parse_float_text(
+            (self.last_metrics or {}).get("ERP (kW)", tx_pow),
+            tx_pow,
+        )
+        freq = _parse_float_text(
+            self.design_info_widget.channel_freq_input.text() or 539.0,
+            539.0,
+        )
         
         dlg = FieldStrengthExposureDialog(self, frequency=freq, tx_power=tx_pow, erp=erp,
                                           mag_3d=self.last_mag_3d, az_angles=self.last_az_angles, el_angles=self.last_el_angles)

@@ -8,18 +8,23 @@ O projeto usa `PyQt6` para a interface e organiza o nucleo tecnico em modulos Py
 - sintese 3D por painel e por arranjo
 - calculo de diretividade 3D
 - exportacao de padroes
+- persistencia estruturada de projeto
 - replicacao gradual da interface do ADT original
 
 ## Estrutura
 
 - `main.py`: janela principal e orquestracao da UI
+- `domain/`: modelos tipados de projeto, paineis, perdas e grupos de excitacao
+- `app/`: servicos de montagem do projeto e integracao entre UI e solver
+- `infra/`: persistencia e IO de projeto
 - `models/antenna.py`: modelos de painel e arranjo
 - `parsers/patterns.py`: leitura de arquivos de padrao HRP e VRP
 - `solver/pattern_synthesis.py`: sintese 3D, soma coerente do arranjo e diretividade
 - `solver/system_metrics.py`: metricas de sistema derivadas do padrao sintetizado
 - `exports/pattern_exporters.py`: exportacao em texto, CSV, PRN e ATDI
 - `widgets/`: widgets PyQt6 que reproduzem as areas funcionais do ADT
-- `test_parsing.py`: smoke test do parser e da sintese basica
+- `tests/`: testes automatizados de regressao e persistencia
+- `test_parsing.py`: smoke test legado do parser e da sintese basica
 
 ## Dependencias
 
@@ -47,16 +52,24 @@ Para rodar o teste basico de parsing e sintese:
 python test_parsing.py
 ```
 
+Para rodar a suite automatizada:
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
 ## Estado atual
 
 Hoje o projeto ja contem:
 
 - shell principal da interface em PyQt6
 - widgets separados para Design Info, Pattern Library, Antenna Design, plots e resumo
-- pacotes separados para `models`, `parsers`, `solver`, `exports` e `widgets`
+- pacotes separados para `domain`, `app`, `infra`, `models`, `parsers`, `solver`, `exports` e `widgets`
 - parser inicial de arquivos HRP/VRP
 - sintese 3D simplificada baseada em arrays complexos `numpy`
 - exportadores basicos para formatos tabulares
+- composicao de excitacao por painel, face e nivel na camada de projeto
+- salvamento e abertura de projeto em formato `.adpy.json`
 
 ## Observacoes praticas
 

@@ -43,3 +43,7 @@ class ResultSummaryWidget(QWidget):
         for i, param in enumerate(self.params):
             val = metrics_dict.get(param, "")
             self.table.item(i, 1).setText(str(val))
+
+    def clear_results(self):
+        for row in range(self.table.rowCount()):
+            self.table.item(row, 1).setText("")

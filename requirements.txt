@@ -4,3 +4,4 @@ PyQt6-sip==13.6.0
 pyqtgraph==0.13.3
 numpy==1.26.4
 pandas==2.2.1
+superqt==0.8.0

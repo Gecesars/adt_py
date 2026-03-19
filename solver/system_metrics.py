@@ -1,6 +1,13 @@
 import numpy as np
 
-from solver.pattern_synthesis import get_3d_directivity
+from solver.pattern_synthesis import (
+    STANDARD_HRP_ANGLES,
+    extract_hrp_cut,
+    extract_vrp_cut,
+    get_3d_directivity,
+    get_maximum_field_angles,
+    get_vrp_beam_tilt_deg,
+)
 
 
 def calculate_system_metrics(
@@ -18,13 +25,25 @@ def calculate_system_metrics(
 
     magnitude_3d, _phase_3d = array_design.calculate_3d_pattern()
     elevation_angles = np.linspace(-90, 90, magnitude_3d.shape[1])
-
+    azimuth_angles = STANDARD_HRP_ANGLES.copy()
     directivity_dbd = get_3d_directivity(magnitude_3d, elevation_angles)
 
-    max_index = np.unravel_index(np.argmax(magnitude_3d), magnitude_3d.shape)
-    azimuth_angles = np.linspace(0, 359, magnitude_3d.shape[0])
-    azimuth_of_max = azimuth_angles[max_index[0]]
-    elevation_of_max = elevation_angles[max_index[1]]
+    azimuth_of_max, elevation_of_max, azimuth_index, elevation_index = (
+        get_maximum_field_angles(magnitude_3d, azimuth_angles, elevation_angles)
+    )
+    hrp_angles, hrp_cut, hrp_cut_elevation = extract_hrp_cut(
+        magnitude_3d,
+        azimuth_angles,
+        elevation_angles,
+        elevation_index=elevation_index,
+    )
+    vrp_angles, vrp_cut, vrp_cut_azimuth = extract_vrp_cut(
+        magnitude_3d,
+        azimuth_angles,
+        elevation_angles,
+        azimuth_index=azimuth_index,
+    )
+    vrp_tilt_deg = get_vrp_beam_tilt_deg(vrp_angles, vrp_cut)
 
     total_loss = internal_loss + pol_loss + filter_loss + feeder_loss
     system_gain = directivity_dbd - total_loss
@@ -54,7 +73,13 @@ def calculate_system_metrics(
         "Transmitter Power (kW)": f"{tx_power:.2f}",
         "ERP (dBW)": f"{erp_dbw:.2f}",
         "ERP (kW)": f"{erp_kw:.2f}",
+        "_hrp_cut_angles_deg": hrp_angles,
+        "_hrp_cut_magnitude": hrp_cut,
+        "_hrp_cut_elevation_deg": hrp_cut_elevation,
+        "_vrp_cut_angles_deg": vrp_angles,
+        "_vrp_cut_magnitude": vrp_cut,
+        "_vrp_cut_azimuth_deg": vrp_cut_azimuth,
+        "_vrp_cut_tilt_deg": vrp_tilt_deg,
     }
 
     return results, magnitude_3d, azimuth_angles, elevation_angles
-

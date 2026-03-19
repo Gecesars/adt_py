@@ -1,0 +1,693 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<PanelMechInfo>
+	<Panel>
+		<Type>Dipole Array_UD-HP-470650</Type>
+		<Band>UHF</Band>
+		<Polarisation>Vertical</Polarisation>
+		<Width>0.211</Width>
+		<Height>0.456</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>0.456</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_UD-HP-620860</Type>
+		<Band>UHF</Band>
+		<Polarisation>Vertical</Polarisation>
+		<Width>0.211</Width>
+		<Height>0.386</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>0.386</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_UD-LP-470650</Type>
+		<Band>UHF</Band>
+		<Polarisation>Vertical</Polarisation>
+		<Width>0.211</Width>
+		<Height>0.456</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>0.456</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_UD-LP-520720</Type>
+		<Band>UHF</Band>
+		<Polarisation>Vertical</Polarisation>
+		<Width>0.211</Width>
+		<Height>0.456</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>0.456</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_UD-LP-620860</Type>
+		<Band>UHF</Band>
+		<Polarisation>Vertical</Polarisation>
+		<Width>0.211</Width>
+		<Height>0.386</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>0.386</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>MTV</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.141</Width>
+		<Height>2.171</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>0</ElevationSpace>
+		<ElevationUnit>Four Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_PCP-500</Type>
+		<Band>UHF</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>0.584</Width>
+		<Height>1.09</Height>
+		<Depth>0.22</Depth>
+		<ElevationSpace>1.15</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_PCP-600</Type>
+		<Band>UHF</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>0.584</Width>
+		<Height>1.09</Height>
+		<Depth>0.22</Depth>
+		<ElevationSpace>1.15</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_PEP</Type>
+		<Band>UHF</Band>
+		<Polarisation>Elliptical</Polarisation>
+		<Width>0.676</Width>
+		<Height>1.09</Height>
+		<Depth>0.205</Depth>
+		<ElevationSpace>1.15</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_PEPL</Type>
+		<Band>UHF</Band>
+		<Polarisation>Elliptical</Polarisation>
+		<Width>0.648</Width>
+		<Height>1.09</Height>
+		<Depth>0.208</Depth>
+		<ElevationSpace>1.15</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_PEPSIL</Type>
+		<Band>UHF</Band>
+		<Polarisation>Elliptical</Polarisation>
+		<Width>0.648</Width>
+		<Height>1.09</Height>
+		<Depth>0.231</Depth>
+		<ElevationSpace>1.15</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_PHP4S</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.5</Width>
+		<Height>1.09</Height>
+		<Depth>0.22</Depth>
+		<ElevationSpace>1.15</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_PHP5S</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.54</Width>
+		<Height>1.09</Height>
+		<Depth>0.22</Depth>
+		<ElevationSpace>1.15</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_PHPXS</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.54</Width>
+		<Height>1.09</Height>
+		<Depth>0.22</Depth>
+		<ElevationSpace>1.15</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_PSP</Type>
+		<Band>UHF</Band>
+		<Polarisation>Slant</Polarisation>
+		<Width>0.623</Width>
+		<Height>1.09</Height>
+		<Depth>0.22</Depth>
+		<ElevationSpace>1.15</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_PVP</Type>
+		<Band>UHF</Band>
+		<Polarisation>Vertical</Polarisation>
+		<Width>0.578</Width>
+		<Height>1.09</Height>
+		<Depth>0.22</Depth>
+		<ElevationSpace>1.15</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_EPR-470536</Type>
+		<Band>UHF</Band>
+		<Polarisation>Elliptical</Polarisation>
+		<Width>0.191</Width>
+		<Height>1.218</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>1.221</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_EPR-470578</Type>
+		<Band>UHF</Band>
+		<Polarisation>Elliptical</Polarisation>
+		<Width>0.198</Width>
+		<Height>1.081</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>1.084</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_EPR-488608</Type>
+		<Band>UHF</Band>
+		<Polarisation>Elliptical</Polarisation>
+		<Width>0.191</Width>
+		<Height>1.069</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>1.072</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_EPR-500620</Type>
+		<Band>UHF</Band>
+		<Polarisation>Elliptical</Polarisation>
+		<Width>0.191</Width>
+		<Height>1.068</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>1.071</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_EPR-578704</Type>
+		<Band>UHF</Band>
+		<Polarisation>Elliptical</Polarisation>
+		<Width>0.159</Width>
+		<Height>0.935</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>0.938</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_EPR-662806</Type>
+		<Band>UHF</Band>
+		<Polarisation>Elliptical</Polarisation>
+		<Width>0.159</Width>
+		<Height>0.82</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>0.823</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_LPR-488608</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.191</Width>
+		<Height>1.069</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>1.072</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_LPR-578704</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.159</Width>
+		<Height>0.935</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>0.938</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_LPR-662806</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.159</Width>
+		<Height>0.82</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>0.823</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_RD-470536</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.191</Width>
+		<Height>1.218</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>1.221</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_RD-470578</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.198</Width>
+		<Height>1.081</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>1.084</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_RD-488608</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.191</Width>
+		<Height>1.069</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>1.072</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_RD-500620</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.191</Width>
+		<Height>1.068</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>1.071</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_RD-578704</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.159</Width>
+		<Height>0.935</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>0.938</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_RD-662806</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.159</Width>
+		<Height>0.82</Height>
+		<Depth>0.184</Depth>
+		<ElevationSpace>0.823</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Superturnstile_STA-HP</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.31</Width>
+		<Height>0.9</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>0.9</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Superturnstile_STA-LLP</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.269</Width>
+		<Height>0.9</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>0.9</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Superturnstile_STA-LMP</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.269</Width>
+		<Height>0.9</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>0.9</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Superturnstile_STA-MP</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.31</Width>
+		<Height>0.9</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>0.9</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_SBB-HP</Type>
+		<Band>UHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.388</Width>
+		<Height>2.165</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>2.166</ElevationSpace>
+		<ElevationUnit>Four Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_SBB-EP</Type>
+		<Band>UHF</Band>
+		<Polarisation>Elliptical</Polarisation>
+		<Width>0.388</Width>
+		<Height>2.165</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>2.166</ElevationSpace>
+		<ElevationUnit>Four Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_NGS</Type>
+		<Band>UHF</Band>
+		<Polarisation>Elliptical</Polarisation>
+		<Width>0.388</Width>
+		<Height>2.165</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>2.166</ElevationSpace>
+		<ElevationUnit>Four Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_618</Type>
+		<Band>VHF</Band>
+		<Polarisation>Vertical</Polarisation>
+		<Width>0.051</Width>
+		<Height>0.595</Height>
+		<Depth>0.507</Depth>
+		<ElevationSpace>1.3</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_655</Type>
+		<Band>VHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>1.3</Width>
+		<Height>1.275</Height>
+		<Depth>0.502</Depth>
+		<ElevationSpace>1.6</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_656</Type>
+		<Band>VHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>1.3</Width>
+		<Height>2.88</Height>
+		<Depth>0.502</Depth>
+		<ElevationSpace>3.2</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_657-174202</Type>
+		<Band>VHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.9</Width>
+		<Height>1.275</Height>
+		<Depth>0.41</Depth>
+		<ElevationSpace>1.6</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_657-202230</Type>
+		<Band>VHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.78</Width>
+		<Height>1.275</Height>
+		<Depth>0.41</Depth>
+		<ElevationSpace>1.6</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_658-174202</Type>
+		<Band>VHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.9</Width>
+		<Height>2.88</Height>
+		<Depth>0.41</Depth>
+		<ElevationSpace>3.2</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_658-202230</Type>
+		<Band>VHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.78</Width>
+		<Height>2.88</Height>
+		<Depth>0.41</Depth>
+		<ElevationSpace>3.2</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_659</Type>
+		<Band>VHF</Band>
+		<Polarisation>Vertical</Polarisation>
+		<Width>1.275</Width>
+		<Height>1.3</Height>
+		<Depth>0.502</Depth>
+		<ElevationSpace>1.6</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_660</Type>
+		<Band>VHF</Band>
+		<Polarisation>Vertical</Polarisation>
+		<Width>1.275</Width>
+		<Height>2.8</Height>
+		<Depth>0.502</Depth>
+		<ElevationSpace>3.2</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_662</Type>
+		<Band>VHF</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>1.3</Width>
+		<Height>1.3</Height>
+		<Depth>0.497</Depth>
+		<ElevationSpace>1.6</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Slot Array_VHF-NGS</Type>
+		<Band>VHF</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>0.388</Width>
+		<Height>1.403</Height>
+		<Depth>0.001</Depth>
+		<ElevationSpace>1.404</ElevationSpace>
+		<ElevationUnit>Two Bays</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_904CP</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>2.2</Width>
+		<Height>2.2</Height>
+		<Depth>0.896</Depth>
+		<ElevationSpace>3.05</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_904HP</Type>
+		<Band>FM</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>2.2</Width>
+		<Height>2.2</Height>
+		<Depth>0.896</Depth>
+		<ElevationSpace>3.05</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_904VP</Type>
+		<Band>FM</Band>
+		<Polarisation>Vertical</Polarisation>
+		<Width>2.2</Width>
+		<Height>2.2</Height>
+		<Depth>0.904</Depth>
+		<ElevationSpace>3.05</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_904CPX</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>3.033</Width>
+		<Height>2</Height>
+		<Depth>0.861</Depth>
+		<ElevationSpace>2.8</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_904SP</Type>
+		<Band>FM</Band>
+		<Polarisation>Slant</Polarisation>
+		<Width>3.033</Width>
+		<Height>2</Height>
+		<Depth>0.918</Depth>
+		<ElevationSpace>2.5</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_904CPFS</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>3.47</Width>
+		<Height>2.75</Height>
+		<Depth>0.901</Depth>
+		<ElevationSpace>2.75</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_903CP</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>1.8</Width>
+		<Height>2.4</Height>
+		<Depth>0.932</Depth>
+		<ElevationSpace>3.05</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_903HP</Type>
+		<Band>FM</Band>
+		<Polarisation>Horizontal</Polarisation>
+		<Width>1.7</Width>
+		<Height>2.4</Height>
+		<Depth>0.898</Depth>
+		<ElevationSpace>3.05</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_903VP</Type>
+		<Band>FM</Band>
+		<Polarisation>Vertical</Polarisation>
+		<Width>2.2</Width>
+		<Height>2.2</Height>
+		<Depth>0.904</Depth>
+		<ElevationSpace>3.05</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>CPF2500</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>0.353</Width>
+		<Height>0.2</Height>
+		<Depth>0.353</Depth>
+		<ElevationSpace>2.65</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_828-8898</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>0.794</Width>
+		<Height>0.794</Height>
+		<Depth>1.38</Depth>
+		<ElevationSpace>2.65</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_828-94104</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>0.794</Width>
+		<Height>0.794</Height>
+		<Depth>1.38</Depth>
+		<ElevationSpace>2.525</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_828-98108</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>0.794</Width>
+		<Height>0.794</Height>
+		<Depth>1.38</Depth>
+		<ElevationSpace>2.4</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_828HP</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>0.794</Width>
+		<Height>0.794</Height>
+		<Depth>1.38</Depth>
+		<ElevationSpace>1.6</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_828DA-8898</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>1.65</Width>
+		<Height>0.794</Height>
+		<Depth>2.02</Depth>
+		<ElevationSpace>2.65</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_828DA-94104</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>1.65</Width>
+		<Height>0.794</Height>
+		<Depth>2.024</Depth>
+		<ElevationSpace>2.525</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_828DA-98108</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>1.65</Width>
+		<Height>0.794</Height>
+		<Depth>2.008</Depth>
+		<ElevationSpace>2.4</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_828HPDA</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>1.65</Width>
+		<Height>0.794</Height>
+		<Depth>2.145</Depth>
+		<ElevationSpace>1.6</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Dipole Array_818</Type>
+		<Band>FM</Band>
+		<Polarisation>Vertical</Polarisation>
+		<Width>0.051</Width>
+		<Height>1.519</Height>
+		<Depth>0.855</Depth>
+		<ElevationSpace>2.4</ElevationSpace>
+		<ElevationUnit>One Bay</ElevationUnit>
+	</Panel>
+	<Panel>
+		<Type>Panel Array_902CP</Type>
+		<Band>FM</Band>
+		<Polarisation>Circular</Polarisation>
+		<Width>1.183</Width>
+		<Height>1.183</Height>
+		<Depth>0.886</Depth>
+		<ElevationSpace>3</ElevationSpace>
+		<ElevationUnit>One Panel</ElevationUnit>
+	</Panel>
+</PanelMechInfo>
