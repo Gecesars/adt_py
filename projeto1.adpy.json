@@ -1,0 +1,853 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "customer": "Marcelo Zamot",
+    "site_name": "valinhos",
+    "antenna_model": "",
+    "design_frequency_mhz": 539.0,
+    "channel_frequency_mhz": 539.0,
+    "polarization": "Horizontal",
+    "signal_type": "Digital",
+    "designer_name": "",
+    "date_created": "March 20, 2026",
+    "design_note": ""
+  },
+  "site": {
+    "tower_type": "Round",
+    "tower_size_m": 0.64,
+    "tower_heading_deg": 0.0,
+    "feeder_type": "HCA214-50",
+    "feeder_length_m": 125.0,
+    "branch_feeder_length_m": 0.0,
+    "transmitter_power_kw": 5.0,
+    "antenna_height_m": 150.0
+  },
+  "losses": {
+    "internal_db": 0.1,
+    "polarization_db": 0.0,
+    "filter_combiner_db": 0.0,
+    "feeder_db": 1.6625
+  },
+  "patterns": [
+    {
+      "index": 1,
+      "mode": "Standard",
+      "panel_type": "Panel Array_PHP4S",
+      "elevation_spacing_m": 1.15,
+      "width_m": 0.5,
+      "height_m": 1.09,
+      "depth_m": 0.22,
+      "hrp_path": "D:\\dev\\Antenna Design Tool (ADT) V1.5.3 Test version\\ADT_PY\\assets\\original_adt\\UnitPattern\\HRP\\Panel Array_PHP4S\\1_pan_2L_RS_LC-538.pat",
+      "vrp_path": ""
+    },
+    {
+      "index": 2,
+      "mode": "Standard",
+      "panel_type": "Panel Array_PHP4S",
+      "elevation_spacing_m": 1.15,
+      "width_m": 0.5,
+      "height_m": 1.09,
+      "depth_m": 0.22,
+      "hrp_path": "D:\\dev\\Antenna Design Tool (ADT) V1.5.3 Test version\\ADT_PY\\assets\\original_adt\\UnitPattern\\HRP\\Panel Array_PHP4S\\1_pan_2L_RS_LC-538.pat",
+      "vrp_path": ""
+    },
+    {
+      "index": 3,
+      "mode": "Standard",
+      "panel_type": "Panel Array_PHP4S",
+      "elevation_spacing_m": 1.15,
+      "width_m": 0.5,
+      "height_m": 1.09,
+      "depth_m": 0.22,
+      "hrp_path": "D:\\dev\\Antenna Design Tool (ADT) V1.5.3 Test version\\ADT_PY\\assets\\original_adt\\UnitPattern\\HRP\\Panel Array_PHP4S\\1_pan_2L_RS_LC-538.pat",
+      "vrp_path": ""
+    },
+    {
+      "index": 4,
+      "mode": "Standard",
+      "panel_type": "Panel Array_PHP4S",
+      "elevation_spacing_m": 1.15,
+      "width_m": 0.5,
+      "height_m": 1.09,
+      "depth_m": 0.22,
+      "hrp_path": "D:\\dev\\Antenna Design Tool (ADT) V1.5.3 Test version\\ADT_PY\\assets\\original_adt\\UnitPattern\\HRP\\Panel Array_PHP4S\\1_pan_2L_RS_LC-538.pat",
+      "vrp_path": ""
+    }
+  ],
+  "panels": [
+    {
+      "panel_id": 1,
+      "angle_deg": 0.0,
+      "offset_m": 0.34,
+      "elevation_m": 0.0,
+      "azimuth_deg": 0.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 1,
+      "face": "A",
+      "input_number": 1
+    },
+    {
+      "panel_id": 2,
+      "angle_deg": 90.0,
+      "offset_m": 0.34,
+      "elevation_m": 0.0,
+      "azimuth_deg": 90.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 1,
+      "face": "B",
+      "input_number": 1
+    },
+    {
+      "panel_id": 3,
+      "angle_deg": 180.0,
+      "offset_m": 0.34,
+      "elevation_m": 0.0,
+      "azimuth_deg": 180.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 1,
+      "face": "C",
+      "input_number": 1
+    },
+    {
+      "panel_id": 4,
+      "angle_deg": 270.0,
+      "offset_m": 0.34,
+      "elevation_m": 0.0,
+      "azimuth_deg": 270.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 1,
+      "face": "D",
+      "input_number": 1
+    },
+    {
+      "panel_id": 5,
+      "angle_deg": 0.0,
+      "offset_m": 0.34,
+      "elevation_m": 1.15,
+      "azimuth_deg": 0.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 2,
+      "face": "A",
+      "input_number": 1
+    },
+    {
+      "panel_id": 6,
+      "angle_deg": 90.0,
+      "offset_m": 0.34,
+      "elevation_m": 1.15,
+      "azimuth_deg": 90.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 2,
+      "face": "B",
+      "input_number": 1
+    },
+    {
+      "panel_id": 7,
+      "angle_deg": 180.0,
+      "offset_m": 0.34,
+      "elevation_m": 1.15,
+      "azimuth_deg": 180.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 2,
+      "face": "C",
+      "input_number": 1
+    },
+    {
+      "panel_id": 8,
+      "angle_deg": 270.0,
+      "offset_m": 0.34,
+      "elevation_m": 1.15,
+      "azimuth_deg": 270.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 2,
+      "face": "D",
+      "input_number": 1
+    },
+    {
+      "panel_id": 9,
+      "angle_deg": 0.0,
+      "offset_m": 0.34,
+      "elevation_m": 2.3,
+      "azimuth_deg": 0.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 3,
+      "face": "A",
+      "input_number": 2
+    },
+    {
+      "panel_id": 10,
+      "angle_deg": 90.0,
+      "offset_m": 0.34,
+      "elevation_m": 2.3,
+      "azimuth_deg": 90.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 3,
+      "face": "B",
+      "input_number": 2
+    },
+    {
+      "panel_id": 11,
+      "angle_deg": 180.0,
+      "offset_m": 0.34,
+      "elevation_m": 2.3,
+      "azimuth_deg": 180.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 3,
+      "face": "C",
+      "input_number": 2
+    },
+    {
+      "panel_id": 12,
+      "angle_deg": 270.0,
+      "offset_m": 0.34,
+      "elevation_m": 2.3,
+      "azimuth_deg": 270.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 3,
+      "face": "D",
+      "input_number": 2
+    },
+    {
+      "panel_id": 13,
+      "angle_deg": 0.0,
+      "offset_m": 0.34,
+      "elevation_m": 3.45,
+      "azimuth_deg": 0.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 4,
+      "face": "A",
+      "input_number": 2
+    },
+    {
+      "panel_id": 14,
+      "angle_deg": 90.0,
+      "offset_m": 0.34,
+      "elevation_m": 3.45,
+      "azimuth_deg": 90.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 4,
+      "face": "B",
+      "input_number": 2
+    },
+    {
+      "panel_id": 15,
+      "angle_deg": 180.0,
+      "offset_m": 0.34,
+      "elevation_m": 3.45,
+      "azimuth_deg": 180.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 4,
+      "face": "C",
+      "input_number": 2
+    },
+    {
+      "panel_id": 16,
+      "angle_deg": 270.0,
+      "offset_m": 0.34,
+      "elevation_m": 3.45,
+      "azimuth_deg": 270.0,
+      "power": 1.0,
+      "phase_deg": 0.0,
+      "tilt_deg": 0.0,
+      "configuration": 0,
+      "pattern_index": 1,
+      "level": 4,
+      "face": "D",
+      "input_number": 2
+    }
+  ],
+  "horizontal_groups": {
+    "A": {
+      "face": "A",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "B": {
+      "face": "B",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "C": {
+      "face": "C",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "D": {
+      "face": "D",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "E": {
+      "face": "E",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "F": {
+      "face": "F",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "G": {
+      "face": "G",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "H": {
+      "face": "H",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "I": {
+      "face": "I",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "J": {
+      "face": "J",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "K": {
+      "face": "K",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "L": {
+      "face": "L",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "M": {
+      "face": "M",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "N": {
+      "face": "N",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "O": {
+      "face": "O",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "P": {
+      "face": "P",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "Q": {
+      "face": "Q",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "R": {
+      "face": "R",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "S": {
+      "face": "S",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "T": {
+      "face": "T",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "U": {
+      "face": "U",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "V": {
+      "face": "V",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "W": {
+      "face": "W",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "X": {
+      "face": "X",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "Y": {
+      "face": "Y",
+      "phase_deg": 0.0,
+      "power": 1.0
+    },
+    "Z": {
+      "face": "Z",
+      "phase_deg": 0.0,
+      "power": 1.0
+    }
+  },
+  "vertical_groups": {
+    "1": {
+      "level": 1,
+      "phase_deg": 108.0
+    },
+    "2": {
+      "level": 2,
+      "phase_deg": 52.0
+    },
+    "3": {
+      "level": 3,
+      "phase_deg": 4.0
+    },
+    "4": {
+      "level": 4,
+      "phase_deg": 0.0
+    },
+    "5": {
+      "level": 5,
+      "phase_deg": 0.0
+    },
+    "6": {
+      "level": 6,
+      "phase_deg": 0.0
+    },
+    "7": {
+      "level": 7,
+      "phase_deg": 0.0
+    },
+    "8": {
+      "level": 8,
+      "phase_deg": 0.0
+    },
+    "9": {
+      "level": 9,
+      "phase_deg": 0.0
+    },
+    "10": {
+      "level": 10,
+      "phase_deg": 0.0
+    },
+    "11": {
+      "level": 11,
+      "phase_deg": 0.0
+    },
+    "12": {
+      "level": 12,
+      "phase_deg": 0.0
+    },
+    "13": {
+      "level": 13,
+      "phase_deg": 0.0
+    },
+    "14": {
+      "level": 14,
+      "phase_deg": 0.0
+    },
+    "15": {
+      "level": 15,
+      "phase_deg": 0.0
+    },
+    "16": {
+      "level": 16,
+      "phase_deg": 0.0
+    },
+    "17": {
+      "level": 17,
+      "phase_deg": 0.0
+    },
+    "18": {
+      "level": 18,
+      "phase_deg": 0.0
+    },
+    "19": {
+      "level": 19,
+      "phase_deg": 0.0
+    },
+    "20": {
+      "level": 20,
+      "phase_deg": 0.0
+    },
+    "21": {
+      "level": 21,
+      "phase_deg": 0.0
+    },
+    "22": {
+      "level": 22,
+      "phase_deg": 0.0
+    },
+    "23": {
+      "level": 23,
+      "phase_deg": 0.0
+    },
+    "24": {
+      "level": 24,
+      "phase_deg": 0.0
+    },
+    "25": {
+      "level": 25,
+      "phase_deg": 0.0
+    },
+    "26": {
+      "level": 26,
+      "phase_deg": 0.0
+    },
+    "27": {
+      "level": 27,
+      "phase_deg": 0.0
+    },
+    "28": {
+      "level": 28,
+      "phase_deg": 0.0
+    },
+    "29": {
+      "level": 29,
+      "phase_deg": 0.0
+    },
+    "30": {
+      "level": 30,
+      "phase_deg": 0.0
+    },
+    "31": {
+      "level": 31,
+      "phase_deg": 0.0
+    },
+    "32": {
+      "level": 32,
+      "phase_deg": 0.0
+    },
+    "33": {
+      "level": 33,
+      "phase_deg": 0.0
+    },
+    "34": {
+      "level": 34,
+      "phase_deg": 0.0
+    },
+    "35": {
+      "level": 35,
+      "phase_deg": 0.0
+    },
+    "36": {
+      "level": 36,
+      "phase_deg": 0.0
+    },
+    "37": {
+      "level": 37,
+      "phase_deg": 0.0
+    },
+    "38": {
+      "level": 38,
+      "phase_deg": 0.0
+    },
+    "39": {
+      "level": 39,
+      "phase_deg": 0.0
+    },
+    "40": {
+      "level": 40,
+      "phase_deg": 0.0
+    },
+    "41": {
+      "level": 41,
+      "phase_deg": 0.0
+    },
+    "42": {
+      "level": 42,
+      "phase_deg": 0.0
+    },
+    "43": {
+      "level": 43,
+      "phase_deg": 0.0
+    },
+    "44": {
+      "level": 44,
+      "phase_deg": 0.0
+    },
+    "45": {
+      "level": 45,
+      "phase_deg": 0.0
+    },
+    "46": {
+      "level": 46,
+      "phase_deg": 0.0
+    },
+    "47": {
+      "level": 47,
+      "phase_deg": 0.0
+    },
+    "48": {
+      "level": 48,
+      "phase_deg": 0.0
+    },
+    "49": {
+      "level": 49,
+      "phase_deg": 0.0
+    },
+    "50": {
+      "level": 50,
+      "phase_deg": 0.0
+    },
+    "51": {
+      "level": 51,
+      "phase_deg": 0.0
+    },
+    "52": {
+      "level": 52,
+      "phase_deg": 0.0
+    },
+    "53": {
+      "level": 53,
+      "phase_deg": 0.0
+    },
+    "54": {
+      "level": 54,
+      "phase_deg": 0.0
+    },
+    "55": {
+      "level": 55,
+      "phase_deg": 0.0
+    },
+    "56": {
+      "level": 56,
+      "phase_deg": 0.0
+    },
+    "57": {
+      "level": 57,
+      "phase_deg": 0.0
+    },
+    "58": {
+      "level": 58,
+      "phase_deg": 0.0
+    },
+    "59": {
+      "level": 59,
+      "phase_deg": 0.0
+    },
+    "60": {
+      "level": 60,
+      "phase_deg": 0.0
+    },
+    "61": {
+      "level": 61,
+      "phase_deg": 0.0
+    },
+    "62": {
+      "level": 62,
+      "phase_deg": 0.0
+    },
+    "63": {
+      "level": 63,
+      "phase_deg": 0.0
+    },
+    "64": {
+      "level": 64,
+      "phase_deg": 0.0
+    },
+    "65": {
+      "level": 65,
+      "phase_deg": 0.0
+    },
+    "66": {
+      "level": 66,
+      "phase_deg": 0.0
+    },
+    "67": {
+      "level": 67,
+      "phase_deg": 0.0
+    },
+    "68": {
+      "level": 68,
+      "phase_deg": 0.0
+    },
+    "69": {
+      "level": 69,
+      "phase_deg": 0.0
+    },
+    "70": {
+      "level": 70,
+      "phase_deg": 0.0
+    },
+    "71": {
+      "level": 71,
+      "phase_deg": 0.0
+    },
+    "72": {
+      "level": 72,
+      "phase_deg": 0.0
+    },
+    "73": {
+      "level": 73,
+      "phase_deg": 0.0
+    },
+    "74": {
+      "level": 74,
+      "phase_deg": 0.0
+    },
+    "75": {
+      "level": 75,
+      "phase_deg": 0.0
+    },
+    "76": {
+      "level": 76,
+      "phase_deg": 0.0
+    },
+    "77": {
+      "level": 77,
+      "phase_deg": 0.0
+    },
+    "78": {
+      "level": 78,
+      "phase_deg": 0.0
+    },
+    "79": {
+      "level": 79,
+      "phase_deg": 0.0
+    },
+    "80": {
+      "level": 80,
+      "phase_deg": 0.0
+    },
+    "81": {
+      "level": 81,
+      "phase_deg": 0.0
+    },
+    "82": {
+      "level": 82,
+      "phase_deg": 0.0
+    },
+    "83": {
+      "level": 83,
+      "phase_deg": 0.0
+    },
+    "84": {
+      "level": 84,
+      "phase_deg": 0.0
+    },
+    "85": {
+      "level": 85,
+      "phase_deg": 0.0
+    },
+    "86": {
+      "level": 86,
+      "phase_deg": 0.0
+    },
+    "87": {
+      "level": 87,
+      "phase_deg": 0.0
+    },
+    "88": {
+      "level": 88,
+      "phase_deg": 0.0
+    },
+    "89": {
+      "level": 89,
+      "phase_deg": 0.0
+    },
+    "90": {
+      "level": 90,
+      "phase_deg": 0.0
+    },
+    "91": {
+      "level": 91,
+      "phase_deg": 0.0
+    },
+    "92": {
+      "level": 92,
+      "phase_deg": 0.0
+    },
+    "93": {
+      "level": 93,
+      "phase_deg": 0.0
+    },
+    "94": {
+      "level": 94,
+      "phase_deg": 0.0
+    },
+    "95": {
+      "level": 95,
+      "phase_deg": 0.0
+    },
+    "96": {
+      "level": 96,
+      "phase_deg": 0.0
+    },
+    "97": {
+      "level": 97,
+      "phase_deg": 0.0
+    },
+    "98": {
+      "level": 98,
+      "phase_deg": 0.0
+    },
+    "99": {
+      "level": 99,
+      "phase_deg": 0.0
+    },
+    "100": {
+      "level": 100,
+      "phase_deg": 0.0
+    }
+  }
+}

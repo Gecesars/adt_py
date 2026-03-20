@@ -38,6 +38,10 @@ from widgets.result_summary import ResultSummaryWidget
 from widgets.save_patterns import SavePatternsSettings, SavePatternsWidget
 from widgets.message_list import MessageListWidget
 from widgets.beam_shape import BeamShapeWidget
+from widgets.pattern_animation_dialog import (
+    PatternAnimationDialog,
+    PatternAnimationSettings,
+)
 from widgets.splitter_utils import enable_free_resize
 
 
@@ -70,6 +74,16 @@ class ADTMainWindow(QMainWindow):
         self.lock_vrp_azimuth = False
         self.total_rotation_angle = 0.0
         self.total_tilt_actions = []
+        self.animation_delay_index = 2
+        self.animation_vrp_start_angle = 0
+        self.animation_vrp_stop_angle = 359
+        self.animation_hrp_start_angle = -90.0
+        self.animation_hrp_stop_angle = 90.0
+        self.scan_hrp_during_vrp_animation = True
+        self.scan_vrp_during_hrp_animation = True
+        self.animation_state = None
+        self.animation_timer = QTimer(self)
+        self.animation_timer.timeout.connect(self._advance_pattern_animation_frame)
         try:
             self.original_adt_catalog = OriginalAdtCatalog()
         except Exception:
@@ -348,10 +362,18 @@ class ADTMainWindow(QMainWindow):
         # --- ACTION MENU ---
         act_action_calc_3d = QAction("Calculate 3D Pattern (1 deg Az, 0.1 deg El)", self)
         act_action_anim_vrp = QAction("Animate VRP", self)
+        act_action_anim_hrp = QAction("Animate HRP", self)
         act_action_hpat = QAction("Launch HPAT", self)
         act_action_vpat = QAction("Launch VPAT", self)
+        act_action_calc_3d.setShortcut("F6")
+        act_action_anim_vrp.setShortcut("F7")
+        act_action_anim_hrp.setShortcut("F8")
+        self.act_action_calc_3d = act_action_calc_3d
+        self.act_action_anim_vrp = act_action_anim_vrp
+        self.act_action_anim_hrp = act_action_anim_hrp
         action_menu.addAction(act_action_calc_3d)
         action_menu.addAction(act_action_anim_vrp)
+        action_menu.addAction(act_action_anim_hrp)
         action_menu.addSeparator()
         action_menu.addAction(act_action_hpat)
         action_menu.addAction(act_action_vpat)
@@ -444,7 +466,8 @@ class ADTMainWindow(QMainWindow):
         act_setup_coords_cart.triggered.connect(self.on_not_implemented)
         act_setup_feed.triggered.connect(self.on_not_implemented)
         
-        act_action_anim_vrp.triggered.connect(self.on_not_implemented)
+        act_action_anim_vrp.triggered.connect(self.on_action_animate_vrp)
+        act_action_anim_hrp.triggered.connect(self.on_action_animate_hrp)
         act_action_hpat.triggered.connect(self.on_not_implemented)
         act_action_vpat.triggered.connect(self.on_not_implemented)
         
@@ -851,6 +874,7 @@ class ADTMainWindow(QMainWindow):
 
     def _on_site_details_changed(self):
         self._sync_site_details_to_design_info()
+        self.refresh_tower_layout_preview()
 
     def _on_central_tab_changed(self, index):
         if self.central_tabs.widget(index) is self.tower_layout_tab:
@@ -866,9 +890,15 @@ class ADTMainWindow(QMainWindow):
     def refresh_tower_layout_preview(self):
         if not hasattr(self, "tower_layout_tab"):
             return
+        site_values = (
+            self.site_details_widget.get_site_values()
+            if hasattr(self, "site_details_widget")
+            else None
+        )
         self.tower_layout_tab.update_preview(
             self.antenna_design_tab.get_array_data(),
             self.pattern_library_widget.get_pattern_configs(),
+            site_values=site_values,
         )
 
     def _sync_design_panel_count_from_array(self):
@@ -1174,6 +1204,181 @@ class ADTMainWindow(QMainWindow):
         
         except Exception as e:
             self._add_message(f"Error calculating pattern: {str(e)}")
+
+    def _animation_delay_ms(self, delay_index: int) -> int:
+        return {
+            0: 10,
+            1: 20,
+            2: 40,
+            3: 60,
+            4: 80,
+        }.get(int(delay_index), 40)
+
+    def _animation_frame_step(self, axis: str) -> float:
+        return 1.0 if axis == "vrp" else 0.1
+
+    def _open_pattern_animation_dialog(self, axis: str) -> PatternAnimationSettings | None:
+        if axis == "vrp":
+            defaults = PatternAnimationSettings(
+                axis="vrp",
+                start_angle=float(self.animation_vrp_start_angle),
+                stop_angle=float(self.animation_vrp_stop_angle),
+                delay_index=int(self.animation_delay_index),
+                scan_peer=bool(self.scan_hrp_during_vrp_animation),
+            )
+        else:
+            defaults = PatternAnimationSettings(
+                axis="hrp",
+                start_angle=float(self.animation_hrp_start_angle),
+                stop_angle=float(self.animation_hrp_stop_angle),
+                delay_index=int(self.animation_delay_index),
+                scan_peer=bool(self.scan_vrp_during_hrp_animation),
+            )
+
+        dialog = PatternAnimationDialog(defaults, self)
+        if dialog.exec():
+            return dialog.get_settings()
+        return None
+
+    def _start_pattern_animation(
+        self,
+        axis: str,
+        start_angle: float,
+        stop_angle: float,
+        delay_index: int = 2,
+        scan_peer: bool = True,
+        *,
+        start_timer: bool = True,
+    ):
+        self._ensure_pattern_ready_for_export()
+        axis = str(axis).lower()
+        if axis not in {"vrp", "hrp"}:
+            raise ValueError("Unknown animation axis")
+
+        start_angle = float(start_angle)
+        stop_angle = float(stop_angle)
+        if stop_angle < start_angle:
+            raise ValueError("Animation stop angle must be greater than or equal to the start angle.")
+
+        self.animation_timer.stop()
+        self.animation_state = {
+            "axis": axis,
+            "start_angle": start_angle,
+            "stop_angle": stop_angle,
+            "current_angle": start_angle,
+            "step": self._animation_frame_step(axis),
+            "delay_ms": self._animation_delay_ms(delay_index),
+            "scan_peer": bool(scan_peer),
+            "original_hrp_elevation_deg": float(self._current_displayed_elevation()),
+            "original_vrp_azimuth_deg": float(self._current_displayed_azimuth()),
+            "original_lock_hrp_elevation": bool(self.lock_hrp_elevation),
+            "original_lock_vrp_azimuth": bool(self.lock_vrp_azimuth),
+            "original_hrp_scan_line": bool(self.hrp_widget.show_selected_azimuth_line),
+            "original_vrp_scan_line": bool(self.vrp_widget.show_selected_elevation_line),
+        }
+
+        if axis == "vrp":
+            self.animation_vrp_start_angle = int(round(start_angle))
+            self.animation_vrp_stop_angle = int(round(stop_angle))
+            self.scan_hrp_during_vrp_animation = bool(scan_peer)
+        else:
+            self.animation_hrp_start_angle = start_angle
+            self.animation_hrp_stop_angle = stop_angle
+            self.scan_vrp_during_hrp_animation = bool(scan_peer)
+        self.animation_delay_index = int(delay_index)
+
+        if start_timer:
+            self.animation_timer.start(self.animation_state["delay_ms"])
+
+    def _apply_animation_frame(self, axis: str, angle_value: float, scan_peer: bool):
+        if axis == "vrp":
+            internal_azimuth_deg = display_to_internal_azimuth(angle_value)
+            self.selected_vrp_azimuth_deg = float(internal_azimuth_deg)
+            self.lock_vrp_azimuth = True
+            self._refresh_vrp_plot(azimuth_deg=internal_azimuth_deg)
+            self.hrp_widget.show_selected_azimuth_line = bool(scan_peer)
+            self.hrp_widget.set_selected_azimuth(internal_azimuth_deg)
+        else:
+            self.selected_hrp_elevation_deg = float(angle_value)
+            self.lock_hrp_elevation = True
+            self._refresh_hrp_plot(elevation_deg=angle_value)
+            self.vrp_widget.show_selected_elevation_line = bool(scan_peer)
+            self.vrp_widget.set_selected_elevation(angle_value)
+
+        self._update_point_info_from_current_cuts()
+
+    def _finish_pattern_animation(self):
+        if not self.animation_state:
+            return
+
+        state = self.animation_state
+        axis = state["axis"]
+        self.animation_timer.stop()
+        self.hrp_widget.show_selected_azimuth_line = state["original_hrp_scan_line"]
+        self.vrp_widget.show_selected_elevation_line = state["original_vrp_scan_line"]
+        self.lock_hrp_elevation = bool(state["original_lock_hrp_elevation"])
+        self.lock_vrp_azimuth = bool(state["original_lock_vrp_azimuth"])
+        self.selected_hrp_elevation_deg = float(state["original_hrp_elevation_deg"])
+        self.selected_vrp_azimuth_deg = float(state["original_vrp_azimuth_deg"])
+        self.animation_state = None
+        self._refresh_displayed_pattern_cuts(
+            elevation_deg=self.selected_hrp_elevation_deg,
+            azimuth_deg=self.selected_vrp_azimuth_deg,
+        )
+        self._add_message(f"{axis.upper()} animation completed.")
+
+    def _advance_pattern_animation_frame(self):
+        if not self.animation_state:
+            return
+
+        state = self.animation_state
+        current_angle = float(state["current_angle"])
+        stop_angle = float(state["stop_angle"])
+        step = float(state["step"])
+        if current_angle > stop_angle + (step / 2.0):
+            self._finish_pattern_animation()
+            return
+
+        self._apply_animation_frame(
+            state["axis"],
+            current_angle,
+            bool(state["scan_peer"]),
+        )
+        state["current_angle"] = round(current_angle + step, 1 if state["axis"] == "hrp" else 0)
+
+    def on_action_animate_vrp(self):
+        try:
+            settings = self._open_pattern_animation_dialog("vrp")
+            if settings is None:
+                return
+            self._start_pattern_animation(
+                settings.axis,
+                settings.start_angle,
+                settings.stop_angle,
+                delay_index=settings.delay_index,
+                scan_peer=settings.scan_peer,
+            )
+            self._add_message("VRP animation started.")
+        except Exception as exc:
+            QMessageBox.warning(self, "Animate VRP", str(exc))
+            self._add_message(f"Animate VRP: {exc}")
+
+    def on_action_animate_hrp(self):
+        try:
+            settings = self._open_pattern_animation_dialog("hrp")
+            if settings is None:
+                return
+            self._start_pattern_animation(
+                settings.axis,
+                settings.start_angle,
+                settings.stop_angle,
+                delay_index=settings.delay_index,
+                scan_peer=settings.scan_peer,
+            )
+            self._add_message("HRP animation started.")
+        except Exception as exc:
+            QMessageBox.warning(self, "Animate HRP", str(exc))
+            self._add_message(f"Animate HRP: {exc}")
 
     def on_not_implemented(self):
         from PyQt6.QtWidgets import QMessageBox

@@ -31,6 +31,25 @@ class MainWindowSiteDetailsTests(unittest.TestCase):
             places=9,
         )
 
+    def test_site_details_drive_tower_preview_geometry(self):
+        window = ADTMainWindow()
+
+        window.site_details_widget.tower_type_combo.setCurrentText("Round")
+        window.site_details_widget.tower_size_spin.setValue(0.80)
+        window.site_details_widget.tower_heading_spin.setValue(30.0)
+
+        self.assertEqual(window.tower_layout_tab.preview_widget.tower_type, "Round")
+        self.assertAlmostEqual(
+            window.tower_layout_tab.preview_widget.tower_half_width_m,
+            0.40,
+            places=6,
+        )
+        self.assertAlmostEqual(
+            window.tower_layout_tab.preview_widget.tower_heading_deg,
+            30.0,
+            places=6,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

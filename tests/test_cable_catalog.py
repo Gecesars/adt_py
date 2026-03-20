@@ -6,15 +6,24 @@ from tests.helpers import PROJECT_ROOT
 
 
 class CableCatalogTests(unittest.TestCase):
-    def test_catalog_loads_feeder_names_from_legacy_xml(self):
-        catalog = CableCatalog(PROJECT_ROOT.parent / "Rating" / "CableRating.xml")
+    def test_catalog_defaults_to_project_local_xml_copy(self):
+        catalog = CableCatalog()
+
+        self.assertEqual(
+            catalog.xml_path,
+            PROJECT_ROOT / "assets" / "original_adt" / "Rating" / "CableRating.xml",
+        )
+        self.assertTrue(catalog.xml_path.exists())
+
+    def test_catalog_loads_feeder_names_from_project_xml(self):
+        catalog = CableCatalog(PROJECT_ROOT / "assets" / "original_adt" / "Rating" / "CableRating.xml")
 
         self.assertIn("HCA38-50", catalog.feeder_names)
         self.assertGreater(len(catalog.feeder_names), 5)
         self.assertEqual(catalog.default_feeder_name, "HCA38-50")
 
     def test_feeder_loss_matches_legacy_nearest_sample_logic(self):
-        xml_path = PROJECT_ROOT.parent / "Rating" / "CableRating.xml"
+        xml_path = PROJECT_ROOT / "assets" / "original_adt" / "Rating" / "CableRating.xml"
         catalog = CableCatalog(xml_path)
         frequency_mhz = 539.0
         length_m = 100.0

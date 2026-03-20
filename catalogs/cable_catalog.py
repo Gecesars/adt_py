@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 from pathlib import Path
+import shutil
 import xml.etree.ElementTree as ET
 
 
@@ -23,12 +24,26 @@ class CableRatingPoint:
 class CableCatalog:
     def __init__(self, xml_path: str | Path | None = None):
         if xml_path is None:
-            xml_path = (
-                Path(__file__).resolve().parents[2] / "Rating" / "CableRating.xml"
-            )
+            xml_path = self._default_xml_path()
         self.xml_path = Path(xml_path)
         self.points = self._load_points()
         self._feeder_names = self._build_feeder_names()
+
+    @staticmethod
+    def _default_xml_path() -> Path:
+        project_root = Path(__file__).resolve().parents[1]
+        project_xml = (
+            project_root / "assets" / "original_adt" / "Rating" / "CableRating.xml"
+        )
+        legacy_xml = project_root.parent / "Rating" / "CableRating.xml"
+
+        if not project_xml.exists() and legacy_xml.exists():
+            project_xml.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(legacy_xml, project_xml)
+
+        if project_xml.exists():
+            return project_xml
+        return legacy_xml
 
     def _load_points(self) -> list[CableRatingPoint]:
         tree = ET.parse(self.xml_path)

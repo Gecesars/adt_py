@@ -115,11 +115,37 @@ class TowerPreviewWidget(QWidget):
         "Top View": (0.0, 90.0),
         "Bottom View": (0.0, -90.0),
     }
+    TOWER_SIDES = {
+        "Triangular": 3,
+        "Square": 4,
+        "Pentagonal": 5,
+        "Hexagonal": 6,
+        "Octagonal": 8,
+    }
+
+    @classmethod
+    def tower_half_span_from_face_size(cls, tower_type: str, tower_size_m: float) -> float:
+        tower_type = (tower_type or "Square").strip() or "Square"
+        tower_size_m = max(0.06, float(tower_size_m))
+        if tower_type == "Round":
+            return tower_size_m / 2.0
+
+        side_count = cls.TOWER_SIDES.get(tower_type, 4)
+        side_length = tower_size_m
+        radius = side_length / (2.0 * math.sin(math.pi / side_count))
+        start_deg = 90.0 - 180.0 / side_count
+        return max(
+            abs(radius * math.cos(math.radians(start_deg + index * (360.0 / side_count))))
+            for index in range(side_count)
+        )
 
     def __init__(self):
         super().__init__()
         self.panels: list[PreviewPanel] = []
         self.tower_half_width_m = 0.17
+        self.tower_type = "Square"
+        self.tower_size_m = 0.34
+        self.tower_heading_deg = 0.0
         self.view_preset = "Side View (Back)"
         self.view_rotation_deg = 0.0
         self.view_elevation_deg = 0.0
@@ -130,14 +156,28 @@ class TowerPreviewWidget(QWidget):
         self.setObjectName("towerPreviewWidget")
 
     def _topdown_tower_half_width(self):
-        # The original ADT top view is slightly schematic rather than a strict
-        # physical projection, so keep the tower a bit more prominent.
-        return self.tower_half_width_m * 1.08
+        polygon = self._tower_world_polygon()
+        if not polygon:
+            return self.tower_half_width_m
+        return max(max(abs(x_value), abs(y_value)) for x_value, y_value in polygon)
 
-    def set_scene(self, panels, tower_half_width_m=None):
+    def set_scene(
+        self,
+        panels,
+        tower_half_width_m=None,
+        tower_type=None,
+        tower_size_m=None,
+        tower_heading_deg=None,
+    ):
         self.panels = list(panels)
         if tower_half_width_m is not None:
             self.tower_half_width_m = max(0.06, float(tower_half_width_m))
+        if tower_type is not None:
+            self.tower_type = str(tower_type or "Square")
+        if tower_size_m is not None:
+            self.tower_size_m = max(0.06, float(tower_size_m))
+        if tower_heading_deg is not None:
+            self.tower_heading_deg = float(tower_heading_deg)
         self.update()
 
     def set_view_preset(self, preset_name):
@@ -232,6 +272,35 @@ class TowerPreviewWidget(QWidget):
             (-half_width, half_width, max_z),
         ]
 
+    def _tower_rotation_deg(self):
+        return float(self.tower_heading_deg)
+
+    def _tower_polygon_points(self):
+        tower_type = (self.tower_type or "Square").strip() or "Square"
+        if tower_type == "Round":
+            radius = max(0.03, self.tower_size_m / 2.0)
+            points = []
+            for index in range(32):
+                angle_rad = math.radians(index * (360.0 / 32.0))
+                points.append((radius * math.cos(angle_rad), radius * math.sin(angle_rad)))
+            return points
+
+        side_count = self.TOWER_SIDES.get(tower_type, 4)
+        side_length = max(0.06, self.tower_size_m)
+        radius = side_length / (2.0 * math.sin(math.pi / side_count))
+        start_deg = 90.0 - 180.0 / side_count
+        points = []
+        for index in range(side_count):
+            angle_rad = math.radians(start_deg + index * (360.0 / side_count))
+            points.append((radius * math.cos(angle_rad), radius * math.sin(angle_rad)))
+        return points
+
+    def _rotate_tower_point(self, x_value, y_value):
+        heading_rad = math.radians(self._tower_rotation_deg())
+        rotated_x = x_value * math.cos(heading_rad) - y_value * math.sin(heading_rad)
+        rotated_y = x_value * math.sin(heading_rad) + y_value * math.cos(heading_rad)
+        return rotated_x, rotated_y
+
     def _fit_transform(self):
         points = self._scene_points()
         if not points:
@@ -268,14 +337,48 @@ class TowerPreviewWidget(QWidget):
         return rotated_x, rotated_y
 
     def _tower_topdown_polygon(self):
-        half_width = self._topdown_tower_half_width()
-        points = [
-            (-half_width, half_width),
-            (half_width, half_width),
-            (half_width, -half_width),
-            (-half_width, -half_width),
-        ]
+        points = self._tower_world_polygon()
         return [self._rotate_topdown_point(x_value, y_value) for x_value, y_value in points]
+
+    def _tower_world_polygon(self):
+        points = [
+            self._rotate_tower_point(x_value, y_value)
+            for x_value, y_value in self._tower_polygon_points()
+        ]
+        return points
+
+    @staticmethod
+    def _ray_polygon_radius(polygon, direction_x, direction_y):
+        def cross(ax, ay, bx, by):
+            return ax * by - ay * bx
+
+        best_radius = None
+        point_count = len(polygon)
+        for index in range(point_count):
+            start_x, start_y = polygon[index]
+            end_x, end_y = polygon[(index + 1) % point_count]
+            edge_x = end_x - start_x
+            edge_y = end_y - start_y
+            denominator = cross(direction_x, direction_y, edge_x, edge_y)
+            if abs(denominator) < 1e-9:
+                continue
+            ray_scale = cross(start_x, start_y, edge_x, edge_y) / denominator
+            edge_scale = cross(start_x, start_y, direction_x, direction_y) / denominator
+            if ray_scale >= 0.0 and 0.0 <= edge_scale <= 1.0:
+                if best_radius is None or ray_scale < best_radius:
+                    best_radius = ray_scale
+        return best_radius
+
+    def _tower_face_radius(self, angle_deg):
+        direction_x = math.sin(math.radians(angle_deg))
+        direction_y = math.cos(math.radians(angle_deg))
+        polygon = self._tower_world_polygon()
+        if not polygon:
+            return self.tower_half_width_m
+        radius = self._ray_polygon_radius(polygon, direction_x, direction_y)
+        if radius is None:
+            return self._topdown_tower_half_width()
+        return radius
 
     def _panel_topdown_polygon(self, panel):
         face_angle_rad = math.radians(panel.face_angle_deg)
@@ -285,25 +388,24 @@ class TowerPreviewWidget(QWidget):
         tangent_y = -math.sin(face_angle_rad)
 
         actual_radius = math.hypot(panel.x, panel.y)
-        visual_tower_half_width = self._topdown_tower_half_width()
+        tower_face_radius = self._tower_face_radius(panel.face_angle_deg)
 
-        # Match the original ADT preview better: the top view compresses panel
-        # depth and width visually while preserving orientation and relative order.
-        display_width = panel.width * 0.78
-        display_depth = max(panel.depth * 0.58, panel.width * 0.18)
+        # Keep the preview schematic, but preserve the real face/panel width ratio.
+        display_width = panel.width
+        display_depth = max(panel.depth * 0.72, panel.width * 0.20)
         inner_half_width = display_width / 2.0
-        outer_half_width = max(display_width * 0.28, inner_half_width * 0.68)
+        outer_half_width = max(display_width * 0.34, inner_half_width * 0.86)
 
         actual_inner_gap = max(
             0.0,
-            actual_radius - panel.depth / 2.0 - self.tower_half_width_m,
+            actual_radius - panel.depth / 2.0 - tower_face_radius,
         )
-        display_inner_gap = min(0.014, 0.004 + actual_inner_gap * 0.35)
+        display_inner_gap = min(0.02, 0.003 + actual_inner_gap * 0.55)
         display_radius = (
-            visual_tower_half_width
+            tower_face_radius
             + display_inner_gap
             + display_depth / 2.0
-            + actual_inner_gap * 0.25
+            + actual_inner_gap * 0.10
         )
 
         inner_center_x = radial_x * (display_radius - display_depth / 2.0)
@@ -944,9 +1046,10 @@ class TowerLayoutWidget(QWidget):
         if preset_name and preset_name in TowerPreviewWidget.VIEW_PRESETS:
             self.view_combo.setCurrentText(preset_name)
 
-    def update_preview(self, array_data, pattern_configs):
+    def update_preview(self, array_data, pattern_configs, site_values=None):
         panels = []
         tower_clearances = []
+        site_values = site_values or {}
         for panel in array_data:
             pattern_config = pattern_configs.get(int(panel.get("pattern_index", 1)), {})
             width_m = _safe_float(pattern_config.get("width_m"), 0.5)
@@ -971,6 +1074,23 @@ class TowerLayoutWidget(QWidget):
                 )
             )
 
-        tower_half_width_m = min(tower_clearances, default=0.17) * 0.95
-        self.preview_widget.set_scene(panels, tower_half_width_m=tower_half_width_m)
+        explicit_tower_size_m = _safe_float(site_values.get("tower_size_m"), 0.0)
+        tower_type = str(site_values.get("tower_type") or "Square")
+        tower_heading_deg = _safe_float(site_values.get("tower_heading_deg"), 0.0)
+
+        if explicit_tower_size_m > 0:
+            tower_half_width_m = TowerPreviewWidget.tower_half_span_from_face_size(
+                tower_type,
+                explicit_tower_size_m,
+            )
+        else:
+            tower_half_width_m = min(tower_clearances, default=0.17) * 0.95
+
+        self.preview_widget.set_scene(
+            panels,
+            tower_half_width_m=tower_half_width_m,
+            tower_type=tower_type,
+            tower_size_m=(explicit_tower_size_m if explicit_tower_size_m > 0 else tower_half_width_m * 2.0),
+            tower_heading_deg=tower_heading_deg,
+        )
         self._update_preview_view()
