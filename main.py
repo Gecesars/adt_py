@@ -10,9 +10,10 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHeaderView, QPushButton, QLabel, QSplitter, QSizePolicy,
                              QFileDialog, QMessageBox)
 from PyQt6.QtCore import Qt, QLocale, QTimer, QByteArray
-from PyQt6.QtGui import QCloseEvent, QFont
+from PyQt6.QtGui import QCloseEvent, QFont, QIcon
 
-from catalogs import CableCatalog, OriginalAdtCatalog
+from app_metadata import APP_NAME, APP_VERSION, APP_WINDOW_TITLE, app_logo_path
+from catalogs import CableCatalog, CustomAntennaCatalog, OriginalAdtCatalog
 from solver.pattern_synthesis import (
     compute_hrp_cut_directivity_db,
     compute_vrp_cut_directivity_db,
@@ -43,6 +44,9 @@ from widgets.pattern_animation_dialog import (
     PatternAnimationSettings,
 )
 from widgets.splitter_utils import enable_free_resize
+from widgets.new_antenna_dialog import NewAntennaDialog
+from widgets.about_dialog import AboutDialog
+from widgets.help_dialog import HelpDialog
 
 
 def _parse_float_text(value, default):
@@ -60,7 +64,16 @@ class ADTMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         QLocale.setDefault(QLocale.c())
-        self.setWindowTitle("Antenna Design Tool (ADT) - Python Version")
+        self.brand_logo_path = app_logo_path()
+        self.setWindowTitle(APP_WINDOW_TITLE)
+        if self.brand_logo_path.exists():
+            brand_icon = QIcon(str(self.brand_logo_path))
+            self.setWindowIcon(brand_icon)
+            app = QApplication.instance()
+            if app is not None:
+                app.setWindowIcon(brand_icon)
+                app.setApplicationName(APP_NAME)
+                app.setApplicationDisplayName(APP_WINDOW_TITLE)
         self.resize(1700, 980)
         self.layout_file_path = Path(__file__).resolve().with_name(".adt_py_layout.json")
         self.last_project = None
@@ -88,6 +101,10 @@ class ADTMainWindow(QMainWindow):
             self.original_adt_catalog = OriginalAdtCatalog()
         except Exception:
             self.original_adt_catalog = None
+        try:
+            self.custom_antenna_catalog = CustomAntennaCatalog()
+        except Exception:
+            self.custom_antenna_catalog = None
         try:
             self.cable_catalog = CableCatalog()
         except Exception:
@@ -223,6 +240,7 @@ class ADTMainWindow(QMainWindow):
         from PyQt6.QtGui import QAction
         
         act_open_proj = QAction("Open Project.ant", self)
+        act_new_antenna = QAction("New Antenna...", self)
         act_save_proj = QAction("Save Project.ant", self)
         act_save_proj_as = QAction("Save Project.ant As", self)
         
@@ -267,6 +285,7 @@ class ADTMainWindow(QMainWindow):
         act_exit = QAction("Exit", self)
         
         file_menu.addAction(act_open_proj)
+        file_menu.addAction(act_new_antenna)
         file_menu.addAction(act_save_proj)
         file_menu.addAction(act_save_proj_as)
         file_menu.addSeparator()
@@ -424,13 +443,15 @@ class ADTMainWindow(QMainWindow):
         util_menu.addAction(act_util_pd)
         
         # --- HELP MENU ---
-        act_help_about = QAction("About ADT", self)
-        act_help_update = QAction("Check the Latest Version", self)
+        act_help_about = QAction("About EFTX Antenna Designer", self)
+        act_help_update = QAction("Open Full Help", self)
+        act_help_update.setShortcut("F1")
         help_menu.addAction(act_help_about)
         help_menu.addAction(act_help_update)
             
         # --- CONNECT MENU ACTIONS ---
         act_open_proj.triggered.connect(self.on_file_open)
+        act_new_antenna.triggered.connect(self.on_file_new_antenna)
         act_save_proj.triggered.connect(self.on_file_save)
         act_save_proj_as.triggered.connect(self.on_file_save)
         
@@ -491,8 +512,8 @@ class ADTMainWindow(QMainWindow):
         act_util_exposure.triggered.connect(self.on_util_exposure)
         act_util_pd.triggered.connect(self.on_not_implemented)
         
-        act_help_about.triggered.connect(self.on_not_implemented)
-        act_help_update.triggered.connect(self.on_not_implemented)
+        act_help_about.triggered.connect(self.on_help_about)
+        act_help_update.triggered.connect(self.on_help_open_manual)
 
         self.setStatusBar(QStatusBar(self))
         
@@ -1144,16 +1165,31 @@ class ADTMainWindow(QMainWindow):
         return 539.0
 
     def refresh_predefined_panel_catalog(self):
-        if self.original_adt_catalog is None:
+        if self.original_adt_catalog is None and self.custom_antenna_catalog is None:
             return
 
         try:
             frequency_mhz = self._get_catalog_frequency_mhz()
             polarization = self.design_info_widget.polarisation_combo.currentText()
-            entries = self.original_adt_catalog.get_standard_panel_entries(
-                frequency_mhz,
-                polarization,
-            )
+            entries = []
+            custom_entries = []
+            legacy_entries = []
+            if self.original_adt_catalog is not None:
+                legacy_entries.extend(
+                    self.original_adt_catalog.get_standard_panel_entries(
+                        frequency_mhz,
+                        polarization,
+                    )
+                )
+            if self.custom_antenna_catalog is not None:
+                custom_entries.extend(
+                    self.custom_antenna_catalog.get_standard_panel_entries(
+                        frequency_mhz,
+                        polarization,
+                    )
+                )
+            entries.extend(custom_entries)
+            entries.extend(legacy_entries)
             self.pattern_library_widget.set_predefined_panel_options(entries)
             if hasattr(self, "tower_layout_tab"):
                 self.refresh_tower_layout_preview()
@@ -1166,6 +1202,48 @@ class ADTMainWindow(QMainWindow):
                     time_str,
                     f"Catalog refresh failed: {error}",
                 )
+
+    def on_file_new_antenna(self):
+        if self.custom_antenna_catalog is None:
+            QMessageBox.warning(
+                self,
+                "New Antenna",
+                "Custom antenna storage is not available in this environment.",
+            )
+            return
+
+        dialog = NewAntennaDialog(self)
+        dialog.band_combo.setCurrentText(
+            "FM"
+            if self._get_catalog_frequency_mhz() < 120.0
+            else "VHF"
+            if self._get_catalog_frequency_mhz() < 300.0
+            else "UHF"
+        )
+        dialog.polarization_combo.setCurrentText(
+            self.design_info_widget.polarisation_combo.currentText()
+        )
+        dialog.freq_spin.setValue(self._get_catalog_frequency_mhz())
+
+        if not dialog.exec():
+            return
+
+        try:
+            entry = self.custom_antenna_catalog.save_custom_antenna(dialog.get_definition())
+            self.refresh_predefined_panel_catalog()
+            self.pattern_library_widget.select_standard_panel(entry.display_name, pattern_indices=[1])
+            self._add_message(f"Custom antenna saved: {entry.display_name}")
+            QMessageBox.information(
+                self,
+                "New Antenna",
+                f"Antenna saved successfully:\n{entry.display_name}",
+            )
+        except Exception as error:
+            QMessageBox.warning(
+                self,
+                "New Antenna",
+                f"Could not save the antenna:\n{error}",
+            )
 
     def on_calculate_clicked(self):
         from app.project_service import build_project_from_ui, calculate_project_metrics
@@ -1379,6 +1457,14 @@ class ADTMainWindow(QMainWindow):
         except Exception as exc:
             QMessageBox.warning(self, "Animate HRP", str(exc))
             self._add_message(f"Animate HRP: {exc}")
+
+    def on_help_about(self):
+        dialog = AboutDialog(self.brand_logo_path, self)
+        dialog.exec()
+
+    def on_help_open_manual(self):
+        dialog = HelpDialog(self.brand_logo_path, self)
+        dialog.exec()
 
     def on_not_implemented(self):
         from PyQt6.QtWidgets import QMessageBox
@@ -1703,10 +1789,11 @@ class ADTMainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    
-    # Optional: Apply a modern stylesheet here if needed
-    # app.setStyleSheet(modern_style)
-    
+    app.setApplicationName(APP_NAME)
+    app.setApplicationDisplayName(APP_WINDOW_TITLE)
+    logo_path = app_logo_path()
+    if logo_path.exists():
+        app.setWindowIcon(QIcon(str(logo_path)))
     window = ADTMainWindow()
     window.show()
     sys.exit(app.exec())

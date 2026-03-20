@@ -231,6 +231,32 @@ class PatternLibraryWidget(QWidget):
 
             self._on_mode_changed(pattern_index)
 
+    def select_standard_panel(self, panel_name, pattern_indices=None):
+        if pattern_indices is None:
+            pattern_indices = [1]
+
+        for pattern_index in pattern_indices:
+            widgets = self.section_widgets.get(pattern_index)
+            if not widgets:
+                continue
+            mode_widget = widgets["mode"]
+            panel_widget = widgets["panel_type"]
+
+            mode_blocker = QSignalBlocker(mode_widget)
+            if mode_widget.currentText() != "Standard":
+                mode_widget.setCurrentText("Standard")
+            del mode_blocker
+
+            panel_blocker = QSignalBlocker(panel_widget)
+            index = panel_widget.findText(panel_name)
+            if index >= 0:
+                panel_widget.setCurrentIndex(index)
+            elif panel_widget.isEditable():
+                panel_widget.setCurrentText(panel_name)
+            del panel_blocker
+
+            self._on_mode_changed(pattern_index)
+
     def _find_pattern_sections(self):
         sections = {}
         current_pattern = None

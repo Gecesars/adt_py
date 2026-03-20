@@ -5,6 +5,7 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+import fitz
 from PIL import Image
 from pypdf import PdfReader
 from PyQt6.QtWidgets import QApplication
@@ -114,6 +115,12 @@ class ExportersTests(unittest.TestCase):
 
             self.assertEqual(len(PdfReader(str(temp_path / "hrp.pdf")).pages), 1)
             self.assertEqual(len(PdfReader(str(temp_path / "vrp.pdf")).pages), 1)
+            self.assertGreaterEqual(len(PdfReader(str(temp_path / "all.pdf")).pages), 8)
+            with fitz.open(temp_path / "all.pdf") as doc:
+                self.assertGreaterEqual(doc.page_count, 8)
+                pix = doc[0].get_pixmap(alpha=False)
+                self.assertGreater(pix.width, 500)
+                self.assertGreater(pix.height, 700)
 
     def test_video_export_generates_avi_file(self):
         window = self._build_window_with_pattern()

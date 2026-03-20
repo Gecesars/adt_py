@@ -44,6 +44,20 @@ class PatternLibraryWidgetTests(unittest.TestCase):
         self.assertTrue(widget.section_widgets[1]["hrp_path_button"].isEnabled())
         self.assertTrue(widget.section_widgets[1]["vrp_path_button"].isEnabled())
 
+    def test_select_standard_panel_forces_standard_mode_and_selection(self):
+        widget = PatternLibraryWidget()
+        entries = self.catalog.get_standard_panel_entries(539.0, "Horizontal")
+
+        widget.set_predefined_panel_options(entries, pattern_indices=[1])
+        widget.section_widgets[1]["mode"].setCurrentText("Custom")
+        widget.select_standard_panel("Panel Array_PHP4S", pattern_indices=[1])
+
+        self.assertEqual(widget.section_widgets[1]["mode"].currentText(), "Standard")
+        self.assertEqual(
+            widget.section_widgets[1]["panel_type"].currentText(),
+            "Panel Array_PHP4S",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

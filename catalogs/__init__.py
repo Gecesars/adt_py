@@ -1,4 +1,5 @@
 from .cable_catalog import CableCatalog, CableRatingPoint
+from .custom_antenna_catalog import CustomAntennaCatalog, CustomAntennaDefinition
 from .original_adt_catalog import (
     OriginalAdtCatalog,
     PredefinedPanelEntry,

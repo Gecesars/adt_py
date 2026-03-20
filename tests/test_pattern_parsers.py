@@ -1,10 +1,11 @@
 import math
+import tempfile
 import unittest
 from pathlib import Path
 
 import numpy as np
 
-from parsers.patterns import read_hrp_pattern, read_vrp_pattern
+from parsers.patterns import load_pattern_for_import, read_hrp_pattern, read_pattern_frequency, read_vrp_pattern
 
 
 class PatternParserTests(unittest.TestCase):
@@ -90,6 +91,107 @@ class PatternParserTests(unittest.TestCase):
         self.assertAlmostEqual(float(angles_deg[1]), -89.9, places=9)
         self.assertAlmostEqual(float(magnitude[1]), expected_mid_mag, places=9)
         self.assertAlmostEqual(float(phase_deg[1]), expected_mid_phase, places=9)
+
+    def test_generic_hrp_csv_ignores_info_columns_and_uses_theta_as_angle(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pattern_path = Path(temp_dir) / "azimute_hpol.csv"
+            pattern_path.write_text(
+                "\n".join(
+                    [
+                        '"Freq [GHz]","Phi [deg]","Theta [deg]","10^(dB10normalize(GainL3y)/20) []"',
+                        "0.471,90,-180,0.765423809360821",
+                        "0.471,90,-179,0.765369844098952",
+                        "0.471,90,-178,0.765240321126155",
+                        "0.471,90,0,1.000000000000000",
+                        "0.471,90,1,0.999500000000000",
+                        "0.471,90,179,0.765369844098952",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            angles_deg, magnitude, phase_deg = load_pattern_for_import(pattern_path, "HRP")
+
+            self.assertEqual(len(angles_deg), 360)
+            self.assertAlmostEqual(float(angles_deg[0]), -180.0, places=9)
+            self.assertAlmostEqual(float(magnitude[0]), 0.765423809360821, places=9)
+            zero_index = int(np.where(np.isclose(angles_deg, 0.0))[0][0])
+            self.assertAlmostEqual(float(magnitude[zero_index]), 1.0, places=6)
+            self.assertTrue(np.allclose(phase_deg, 0.0))
+
+    def test_generic_vrp_csv_ignores_info_columns_and_converts_db_values(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pattern_path = Path(temp_dir) / "elevacao_v.csv"
+            pattern_path.write_text(
+                "\n".join(
+                    [
+                        '"Freq [GHz]","Phi [deg]","Theta [deg]","dB10normalize(GainL3X) []"',
+                        "0.186,90,-2,-0.0118115213671719",
+                        "0.186,90,-1,-0.00218568255865022",
+                        "0.186,90,0,0",
+                        "0.186,90,1,-0.00525649721008869",
+                        "0.186,90,2,-0.0179427147779443",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            angles_deg, magnitude, phase_deg = load_pattern_for_import(pattern_path, "VRP")
+
+            self.assertEqual(len(angles_deg), 1801)
+            zero_index = int(np.where(np.isclose(angles_deg, 0.0))[0][0])
+            self.assertAlmostEqual(float(magnitude[zero_index]), 1.0, places=6)
+            self.assertLess(float(magnitude[zero_index - 10]), 1.0)
+            self.assertLess(float(magnitude[zero_index + 10]), 1.0)
+            self.assertTrue(np.allclose(phase_deg, 0.0))
+
+    def test_read_pattern_frequency_and_prn_section_import(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pattern_path = Path(temp_dir) / "sample.prn"
+            pattern_path.write_text(
+                "\n".join(
+                    [
+                        "NAME TEST",
+                        "MAKE EFTX",
+                        "FREQUENCY 99.50 MHz",
+                        "HORIZONTAL 360",
+                        "0\t1.0",
+                        "1\t0.9",
+                        "2\t0.8",
+                        "3\t0.7",
+                        "4\t0.6",
+                        "5\t0.5",
+                        "6\t0.4",
+                        "7\t0.3",
+                        "8\t0.2",
+                        "9\t0.1",
+                        "VERTICAL 360",
+                        "-4\t0.6",
+                        "-3\t0.7",
+                        "-2\t0.8",
+                        "-1\t0.9",
+                        "0\t1.0",
+                        "1\t0.9",
+                        "2\t0.8",
+                        "3\t0.7",
+                        "4\t0.6",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            self.assertAlmostEqual(read_pattern_frequency(pattern_path), 99.5, places=6)
+
+            hrp_angles, hrp_magnitude, _ = load_pattern_for_import(pattern_path, "HRP")
+            vrp_angles, vrp_magnitude, _ = load_pattern_for_import(pattern_path, "VRP")
+
+            hrp_zero_index = int(np.where(np.isclose(hrp_angles, 0.0))[0][0])
+            vrp_zero_index = int(np.where(np.isclose(vrp_angles, 0.0))[0][0])
+            self.assertAlmostEqual(float(hrp_magnitude[hrp_zero_index]), 1.0, places=6)
+            self.assertAlmostEqual(float(vrp_magnitude[vrp_zero_index]), 1.0, places=6)
 
 
 if __name__ == "__main__":

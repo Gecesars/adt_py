@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='utf-8'?>
+<CustomPanels>
+  <Panel>
+    <DisplayName>Painel MIMO DTV</DisplayName>
+    <Type>Painel MIMO DTV</Type>
+    <Band>VHF</Band>
+    <Polarisation>Slant</Polarisation>
+    <Width>0.9</Width>
+    <Height>1.8</Height>
+    <Depth>0.35</Depth>
+    <ElevationSpace>1.8</ElevationSpace>
+    <ElevationUnit>One Panel</ElevationUnit>
+    <ReferenceFrequencyMHz>300</ReferenceFrequencyMHz>
+    <HRPPath>UnitPattern\HRP\Painel_MIMO_DTV\Painel_MIMO_DTV_300.pat</HRPPath>
+    <VRPPath>UnitPattern\VRP\Painel_MIMO_DTV\Painel_MIMO_DTV_300.vup</VRPPath>
+    <HalfPowerVRPAngle />
+  </Panel>
+  <Panel>
+    <DisplayName>teste</DisplayName>
+    <Type>teste</Type>
+    <Band>UHF</Band>
+    <Polarisation>Horizontal</Polarisation>
+    <Width>0.5</Width>
+    <Height>1.09</Height>
+    <Depth>0.22</Depth>
+    <ElevationSpace>1.15</ElevationSpace>
+    <ElevationUnit>One Panel</ElevationUnit>
+    <ReferenceFrequencyMHz>539</ReferenceFrequencyMHz>
+    <HRPPath>UnitPattern\HRP\teste\teste_539.pat</HRPPath>
+    <VRPPath>UnitPattern\VRP\teste\teste_539.vup</VRPPath>
+    <HalfPowerVRPAngle />
+  </Panel>
+  <Panel>
+    <DisplayName>painel mimo</DisplayName>
+    <Type>painel mimo</Type>
+    <Band>UHF</Band>
+    <Polarisation>Horizontal</Polarisation>
+    <Width>0.5</Width>
+    <Height>1.09</Height>
+    <Depth>0.22</Depth>
+    <ElevationSpace>1.15</ElevationSpace>
+    <ElevationUnit>One Panel</ElevationUnit>
+    <ReferenceFrequencyMHz>300</ReferenceFrequencyMHz>
+    <HRPPath>UnitPattern\HRP\painel_mimo\painel_mimo_300.pat</HRPPath>
+    <VRPPath>UnitPattern\VRP\painel_mimo\painel_mimo_300.vup</VRPPath>
+    <HalfPowerVRPAngle />
+  </Panel>
+  <Panel>
+    <DisplayName>painel mimo final</DisplayName>
+    <Type>painel mimo final</Type>
+    <Band>UHF</Band>
+    <Polarisation>Slant</Polarisation>
+    <Width>1.3</Width>
+    <Height>1.3</Height>
+    <Depth>0.6</Depth>
+    <ElevationSpace>1.66</ElevationSpace>
+    <ElevationUnit>One Bay</ElevationUnit>
+    <ReferenceFrequencyMHz>300</ReferenceFrequencyMHz>
+    <HRPPath>UnitPattern\HRP\painel_mimo_final\painel_mimo_final_300.pat</HRPPath>
+    <VRPPath>UnitPattern\VRP\painel_mimo_final\painel_mimo_final_300.vup</VRPPath>
+    <HalfPowerVRPAngle />
+  </Panel>
+</CustomPanels>

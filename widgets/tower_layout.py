@@ -400,13 +400,10 @@ class TowerPreviewWidget(QWidget):
             0.0,
             actual_radius - panel.depth / 2.0 - tower_face_radius,
         )
-        display_inner_gap = min(0.02, 0.003 + actual_inner_gap * 0.55)
-        display_radius = (
-            tower_face_radius
-            + display_inner_gap
-            + display_depth / 2.0
-            + actual_inner_gap * 0.10
-        )
+        # Keep the preview schematic, but preserve the real clearance from the
+        # tower face to the back of the panel so large offsets do not collapse
+        # visually toward the tower centre.
+        display_radius = tower_face_radius + actual_inner_gap + display_depth / 2.0
 
         inner_center_x = radial_x * (display_radius - display_depth / 2.0)
         inner_center_y = radial_y * (display_radius - display_depth / 2.0)

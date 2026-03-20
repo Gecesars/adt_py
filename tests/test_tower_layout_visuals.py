@@ -262,6 +262,42 @@ class TowerLayoutVisualTests(unittest.TestCase):
         self.assertAlmostEqual(panel_inner_edge, 0.50, places=6)
         self.assertAlmostEqual(panel_inner_edge / tower_face_width, 0.50 / 0.64, places=6)
 
+    def test_top_view_preview_preserves_clearance_for_large_offset(self):
+        widget = TowerLayoutWidget()
+        widget.view_combo.setCurrentText("Top View")
+        widget.update_preview(
+            [
+                {
+                    "pattern_index": 1,
+                    "angle_deg": 0.0,
+                    "offset_m": 1.0,
+                    "elevation_m": 0.0,
+                    "azimuth_deg": 0.0,
+                    "tilt_deg": 0.0,
+                }
+            ],
+            {
+                1: {
+                    "width_m": 1.30,
+                    "height_m": 2.00,
+                    "depth_m": 0.20,
+                }
+            },
+            site_values={
+                "tower_type": "Square",
+                "tower_size_m": 0.64,
+                "tower_heading_deg": 0.0,
+            },
+        )
+
+        preview = widget.preview_widget
+        panel_polygon = preview._panel_topdown_polygon(preview.panels[0])
+        inner_edge_y = (panel_polygon[0][1] + panel_polygon[1][1]) / 2.0
+        tower_face_radius = preview._tower_face_radius(0.0)
+
+        self.assertGreater(inner_edge_y, tower_face_radius)
+        self.assertAlmostEqual(inner_edge_y - tower_face_radius, 0.58, places=6)
+
 
 if __name__ == "__main__":
     unittest.main()

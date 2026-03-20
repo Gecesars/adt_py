@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from datetime import datetime
 import io
 import math
 from pathlib import Path
+import tempfile
 from typing import Any
 
 import numpy as np
@@ -30,6 +32,7 @@ from solver.pattern_synthesis import (
 EPSILON = 1e-12
 PAGE_PORTRAIT = (1240, 1754)
 PAGE_LANDSCAPE = (1754, 1240)
+TEMPLATE_SAFE_RECT = (86, 176, 1068, 1364)
 LEGACY_PLOT_IMAGE_SIZE = (1000, 1400)
 LEGACY_PLOT_HEADER_HEIGHT = 160
 LEGACY_PLOT_BODY_HEIGHT = 1000
@@ -887,6 +890,183 @@ def _build_summary_pages(context: ExportContext) -> list[QImage]:
     return [canvas]
 
 
+def _draw_section_title(
+    painter: QPainter,
+    left: int,
+    top: int,
+    width: int,
+    title: str,
+):
+    painter.fillRect(QRect(left, top, width, 28), QColor("#e8eef6"))
+    painter.setPen(QColor("#5a6a7a"))
+    painter.drawRect(QRect(left, top, width, 28))
+    painter.setPen(QColor("#1f1f1f"))
+    painter.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+    painter.drawText(
+        QRect(left + 10, top, width - 20, 28),
+        Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+        title,
+    )
+
+
+def _site_detail_rows(context: ExportContext) -> list[tuple[str, str]]:
+    context = ensure_project_context(context)
+    project = context.project
+    if project is None:
+        return []
+
+    return [
+        ("Tower Type", project.site.tower_type),
+        ("Tower Face Width / Diameter (m)", _fmt(project.site.tower_size_m, 3)),
+        ("Tower Heading (deg)", _fmt(project.site.tower_heading_deg, 1)),
+        ("Main Feeder Size", project.site.feeder_type),
+        ("Feeder Length (m)", _fmt(project.site.feeder_length_m, 2)),
+        ("Branch Feeder Base Length (m)", _fmt(project.site.branch_feeder_length_m, 2)),
+        ("Transmitter Power (kW)", _fmt(project.site.transmitter_power_kw, 2)),
+        ("Antenna Height (HAAT 10-1200m)", _fmt(project.site.antenna_height_m, 1)),
+    ]
+
+
+def _loss_rows(context: ExportContext) -> list[tuple[str, str]]:
+    context = ensure_project_context(context)
+    project = context.project
+    if project is None:
+        return []
+    return [
+        ("Internal Loss (dB)", _fmt(project.losses.internal_db, 2)),
+        ("Polarisation Loss (dB)", _fmt(project.losses.polarization_db, 2)),
+        ("Filter/Combiner Loss (dB)", _fmt(project.losses.filter_combiner_db, 2)),
+        ("Main Feeder Loss (dB)", _fmt(project.losses.feeder_db, 2)),
+    ]
+
+
+def _project_info_rows(context: ExportContext) -> list[tuple[str, str]]:
+    meta = _collect_pattern_metadata(context)
+    context = ensure_project_context(context)
+    project = context.project
+    panel_count = len(project.panels) if project is not None else 0
+    pattern_count = len(project.patterns) if project is not None else 0
+    return [
+        ("Customer", meta["customer"]),
+        ("Site Name", meta["site_name"]),
+        ("Antenna Model", meta["antenna_model"]),
+        ("Design Frequency (MHz)", meta["design_frequency_mhz"]),
+        ("Channel Frequency (MHz)", meta["frequency_mhz"]),
+        ("Polarisation", meta["polarisation"]),
+        ("Date", _today_long()),
+        ("Patterns", str(pattern_count)),
+        ("Panels", str(panel_count)),
+    ]
+
+
+def _pattern_summary_rows(context: ExportContext) -> list[list[str]]:
+    context = ensure_project_context(context)
+    if context.project is None:
+        return []
+    rows = []
+    for pattern in context.project.patterns:
+        rows.append(
+            [
+                str(pattern.index),
+                pattern.panel_type,
+                _fmt(pattern.width_m, 3),
+                _fmt(pattern.height_m, 3),
+                _fmt(pattern.depth_m, 3),
+                Path(pattern.hrp_path).name if pattern.hrp_path else "",
+                Path(pattern.vrp_path).name if pattern.vrp_path else "Generated",
+            ]
+        )
+    return rows
+
+
+def _build_project_overview_page(context: ExportContext) -> QImage:
+    canvas = _new_canvas(PAGE_PORTRAIT)
+    painter = QPainter(canvas)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+    _draw_logo_header(
+        painter,
+        PAGE_PORTRAIT[0],
+        context,
+        "Project Overview",
+        [
+            "Summary of project metadata, site configuration, losses and patterns.",
+            "Generated from current ADT_PY project state.",
+        ],
+    )
+
+    left_x = 60
+    right_x = 650
+    top_y = 180
+    block_width = 530
+
+    _draw_section_title(painter, left_x, top_y, block_width, "Project Information")
+    _draw_table(
+        painter,
+        left_x,
+        top_y + 30,
+        [220, 310],
+        [["Field", "Value"], *[list(row) for row in _project_info_rows(context)]],
+        header_fill=QColor("#efefef"),
+        row_height=28,
+        font=QFont("Arial", 9),
+    )
+
+    _draw_section_title(painter, right_x, top_y, block_width, "Site Details")
+    _draw_table(
+        painter,
+        right_x,
+        top_y + 30,
+        [260, 270],
+        [["Field", "Value"], *[list(row) for row in _site_detail_rows(context)]],
+        header_fill=QColor("#efefef"),
+        row_height=28,
+        font=QFont("Arial", 9),
+    )
+
+    lower_y = 530
+    _draw_section_title(painter, left_x, lower_y, block_width, "Losses")
+    _draw_table(
+        painter,
+        left_x,
+        lower_y + 30,
+        [260, 270],
+        [["Parameter", "Value"], *[list(row) for row in _loss_rows(context)]],
+        header_fill=QColor("#efefef"),
+        row_height=30,
+        font=QFont("Arial", 9),
+    )
+
+    pattern_y = 720
+    _draw_section_title(painter, left_x, pattern_y, PAGE_PORTRAIT[0] - 120, "Pattern Library")
+    _draw_table(
+        painter,
+        left_x,
+        pattern_y + 30,
+        [70, 310, 90, 90, 90, 210, 260],
+        [["No.", "Panel Type", "Width", "Height", "Depth", "HRP", "VRP"], *_pattern_summary_rows(context)],
+        header_fill=QColor("#efefef"),
+        row_height=28,
+        font=QFont("Arial", 8),
+    )
+
+    summary_y = 1040
+    _draw_section_title(painter, left_x, summary_y, PAGE_PORTRAIT[0] - 120, "Result Summary")
+    _draw_table(
+        painter,
+        left_x,
+        summary_y + 30,
+        [500, 620],
+        [["Parameter", "Value"], *[list(row) for row in _result_summary_rows(context)]],
+        header_fill=QColor("#efefef"),
+        row_height=28,
+        font=QFont("Arial", 9),
+    )
+
+    painter.end()
+    return canvas
+
+
 def _build_panel_pages(context: ExportContext) -> list[QImage]:
     meta = _collect_pattern_metadata(context)
     headers = [
@@ -986,27 +1166,17 @@ def _qimage_to_rgb_array(image: QImage) -> np.ndarray:
 def _grab_widget_resized(widget: Any, width: int, height: int) -> QImage:
     if widget is None:
         return _new_canvas((width, height))
-
-    previous_size = widget.size()
-    previous_minimum_size = widget.minimumSize()
-    previous_maximum_size = widget.maximumSize()
-    try:
-        widget.setMinimumSize(width, height)
-        widget.setMaximumSize(width, height)
-        widget.resize(width, height)
-        widget.update()
-        QApplication.processEvents()
-        pixmap = widget.grab()
-    finally:
-        widget.setMinimumSize(previous_minimum_size)
-        widget.setMaximumSize(previous_maximum_size)
-        widget.resize(previous_size)
-        widget.update()
-        QApplication.processEvents()
-
+    QApplication.processEvents()
+    pixmap = widget.grab()
     if pixmap.isNull():
         return _new_canvas((width, height))
-    return pixmap.toImage()
+    image = pixmap.toImage()
+    return image.scaled(
+        width,
+        height,
+        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.SmoothTransformation,
+    )
 
 
 def _save_pil_image(path: str | Path, image: PILImage.Image, format_name: str):
@@ -1044,6 +1214,67 @@ def _normalize_pdf_media_box(path: str | Path, width_pt: float, height_pt: float
         writer.add_page(page)
     with Path(path).open("wb") as handle:
         writer.write(handle)
+
+
+def _project_template_pdf_path() -> Path:
+    return Path(__file__).resolve().parents[1] / "modelo.pdf"
+
+
+def _page_to_qimage(page: QImage | PILImage.Image) -> QImage:
+    if isinstance(page, QImage):
+        return page
+    return _qimage_from_pil(page)
+
+
+def _render_pdf_template_background(size: tuple[int, int]) -> PILImage.Image:
+    try:
+        import fitz
+    except ImportError as exc:  # pragma: no cover
+        raise ValueError("PyMuPDF is required to render modelo.pdf for the final report.") from exc
+
+    template_path = _project_template_pdf_path()
+    if not template_path.exists():
+        raise ValueError(f"Template PDF not found: {template_path}")
+
+    document = fitz.open(template_path)
+    try:
+        page = document[0]
+        scale_x = size[0] / float(page.rect.width)
+        scale_y = size[1] / float(page.rect.height)
+        pixmap = page.get_pixmap(matrix=fitz.Matrix(scale_x, scale_y), alpha=False)
+        image = PILImage.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
+        return image.convert("RGBA")
+    finally:
+        document.close()
+
+
+def _make_near_white_transparent(image: PILImage.Image) -> PILImage.Image:
+    rgba = np.array(image.convert("RGBA"))
+    white_mask = (
+        (rgba[:, :, 0] > 246)
+        & (rgba[:, :, 1] > 246)
+        & (rgba[:, :, 2] > 246)
+    )
+    rgba[white_mask, 3] = 0
+    return PILImage.fromarray(rgba, mode="RGBA")
+
+
+def _compose_template_backed_page(page: QImage | PILImage.Image) -> PILImage.Image:
+    background = _render_pdf_template_background(PAGE_PORTRAIT)
+    foreground_qimage = _page_to_qimage(page).convertToFormat(QImage.Format.Format_RGBA8888)
+    foreground = _make_near_white_transparent(_qimage_to_pil(foreground_qimage).convert("RGBA"))
+
+    safe_x, safe_y, safe_width, safe_height = TEMPLATE_SAFE_RECT
+    foreground.thumbnail((safe_width, safe_height), PILImage.Resampling.LANCZOS)
+    paste_x = safe_x + (safe_width - foreground.width) // 2
+    paste_y = safe_y + (safe_height - foreground.height) // 2
+    background.alpha_composite(foreground, (paste_x, paste_y))
+    return background.convert("RGB")
+
+
+def _write_template_backed_pdf_pages(path: str | Path, pages: list[QImage | PILImage.Image]):
+    composed_pages = [_compose_template_backed_page(page) for page in pages]
+    _save_pil_pdf(path, *composed_pages)
 
 
 def _draw_underlined_text(
@@ -1962,21 +2193,54 @@ def export_panel_pdf(path: str | Path, context: ExportContext):
     _write_pdf_pages(path, _build_panel_pages(context), landscape=True)
 
 
+def _build_all_pdf_pages(context: ExportContext) -> list[QImage | PILImage.Image]:
+    _angles_deg, _magnitudes, elevation_deg, hrp_directivity = _get_displayed_hrp(context)
+    _vrp_angles, _vrp_magnitudes, _azimuth_deg, vrp_directivity, tilt_deg = _get_displayed_vrp(context)
+    frequency_mhz = ensure_project_context(context).project.metadata.channel_frequency_mhz
+
+    return [
+        _build_project_overview_page(context),
+        *_build_summary_pages(context),
+        _qimage_from_pil(_render_layout_report_image(context)),
+        *_build_panel_pages(context),
+        _qimage_from_pil(_render_hrp_report_image(context)),
+        _qimage_from_pil(
+            _build_tabulated_pattern_pdf_page(
+                context,
+                "Tabulated Horizontal Radiation Pattern",
+                [
+                    ("Polarisation:", _collect_pattern_metadata(context)["polarisation"]),
+                    ("Frequency (MHz):", f"{frequency_mhz:.2f}"),
+                    ("Directivity:", f"{10 ** (hrp_directivity / 10.0):.1f} ({hrp_directivity:.2f} dB)"),
+                    ("Elevation Angle:", f"{elevation_deg:.2f} degrees"),
+                ],
+                columns_per_group=8,
+                row_count=45,
+                data_rows=_build_hrp_pdf_rows(context),
+            )
+        ),
+        _qimage_from_pil(_render_vrp_report_image(context)),
+        _qimage_from_pil(
+            _build_tabulated_pattern_pdf_page(
+                context,
+                "Tabulated Vertical Radiation Pattern",
+                [
+                    ("Polarisation:", _collect_pattern_metadata(context)["polarisation"]),
+                    ("Frequency (MHz):", f"{frequency_mhz:.2f}"),
+                    ("Directivity:", f"{10 ** (vrp_directivity / 10.0):.1f} ({vrp_directivity:.2f} dB)"),
+                    ("Beam Tilt:", f"{tilt_deg:.2f} degrees"),
+                ],
+                columns_per_group=6,
+                row_count=41,
+                data_rows=_build_vrp_pdf_rows(context),
+            )
+        ),
+    ]
+
+
 def export_all_pdf(path: str | Path, context: ExportContext):
     _require_pattern(context)
-    pages = []
-    pages.extend(_build_summary_pages(context))
-    pages.extend(_build_panel_pages(context))
-    pages.append(_qimage_from_pil(_render_hrp_report_image(context)))
-    pages.append(_qimage_from_pil(_render_vrp_report_image(context)))
-    pages.append(
-        _compose_widget_report_image(
-            context,
-            "Tower and Panel Layout",
-            _widget_grab(context.tower_preview_widget),
-        )
-    )
-    _write_pdf_pages(path, pages, landscape=True)
+    _write_template_backed_pdf_pages(path, _build_all_pdf_pages(context))
 
 
 def export_vrp_video(path: str | Path, context: ExportContext):
